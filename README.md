@@ -199,7 +199,7 @@ Logs no Linux: `~/.config/EasyGameTranslator/logs/egt.log`.
 ### Perguntas frequentes
 
 **Preciso instalar Python?**
-No **Windows, não** — já vem tudo dentro do instalador/portátil. No **Linux, sim** (o programa roda a partir do código).
+No **Windows, não** — já vem tudo dentro do instalador/portátil. No **Linux**, com o AppImage ou o `.deb` dos Releases, **também não**; só precisa se rodar a partir do código.
 
 **Funciona sem internet?**
 O OCR (RapidOCR) e o **cache** funcionam offline: frases já traduzidas aparecem sem internet. Frases novas precisam de internet,
@@ -409,7 +409,8 @@ an optional component manager, **20 UI languages** (including Arabic RTL) and 14
     then *Select region* → *Alphabet* (game language) + *Translate to* → keep *RapidOCR* → *Start*. Run the game in
     windowed/borderless mode (exclusive fullscreen hides overlays). If it won't start, install the official
     [Visual C++ Redistributable x64](https://aka.ms/vs/17/release/vc_redist.x64.exe). Logs: *Options › Report bugs*.
-  - *Linux*: no prebuilt release yet — run from source: install git, Node.js 20+, Python 3.10+ (venv, pip), then
+  - *Linux*: download `EasyGameTranslator-<version>-x86_64.AppImage` (then `chmod +x` and run it; needs FUSE 2 or
+    `--appimage-extract-and-run`) or the `.deb` (`sudo apt install ./EasyGameTranslator-<version>-amd64.deb`). Or run from source: install git, Node.js 20+, Python 3.10+ (venv, pip), then
     `npm ci && npm run setup:python && npm run dev`; optional AppImage with `npm run dist:linux`. Screen capture needs an
     **X11** session (Wayland usually blocks it). Tested only on Debian 13 / Python 3.13 / X11.
 - **Privacy**: screenshots and OCR stay on your PC; online translators receive only the recognized text (never images).
