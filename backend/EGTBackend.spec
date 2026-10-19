@@ -32,6 +32,12 @@ a = Analysis(
 # enxuga o pacote: sem codec de vídeo do OpenCV e sem o modelo offline do pocketsphinx (usamos só o reconhecimento online)
 a.binaries = [b for b in a.binaries if "opencv_videoio_ffmpeg" not in b[0]]
 a.datas = [d for d in a.datas if "pocketsphinx" not in d[0].lower()]
+# Linux: não leva as bibliotecas do sistema de quem compilou (X11/xcb, libstdc++, libgcc_s) — o AppImage usa as do PC
+# do usuário (presentes em qualquer desktop) e assim roda em distros com glibc mais antiga. Não afeta o Windows.
+import sys
+if sys.platform.startswith("linux"):
+    _SYS = ("libX11", "libXau.so", "libXdmcp", "libXext", "libXfixes", "libXrandr", "libXrender", "libxcb", "libstdc++", "libgcc_s")
+    a.binaries = [b for b in a.binaries if not (os.path.basename(b[0]).startswith(_SYS) and b[1].startswith(("/usr/", "/lib")))]
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="EGTBackend", console=True, upx=False, icon=os.path.join(SPECPATH, '..', 'build', 'icon.ico'))
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="EGTBackend")
