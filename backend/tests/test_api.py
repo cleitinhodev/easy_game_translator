@@ -79,12 +79,13 @@ def test_ws_rejects_bad_token_and_origin(client):
 def test_secrets_are_masked_in_settings(client, ctrl):
     from egt.config import MASK, SECRET_PATHS
     for i, p in enumerate(SECRET_PATHS):
-        ctrl.settings.set(p, f"SEGREDO-{i}", save=False)
+        ctrl.settings.set_secret(p, f"SEGREDO-{i}")
     body = client.get("/api/settings", headers=H).text
     assert "SEGREDO-" not in body and MASK in body
+    assert '"enc"' not in body and "aesgcm:v1:" not in body       # nem o blob cifrado vai para a UI
     # reenviar a máscara não sobrescreve a chave real
     client.patch("/api/settings", json={"changes": {SECRET_PATHS[0]: MASK}}, headers=H)
-    assert ctrl.settings.get(SECRET_PATHS[0]) == "SEGREDO-0"
+    assert ctrl.settings.secret(SECRET_PATHS[0]) == "SEGREDO-0"
 
 
 def test_settings_patch_validates(client):

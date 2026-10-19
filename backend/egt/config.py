@@ -14,7 +14,7 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-from . import paths
+from . import paths, vault
 
 log = logging.getLogger(__name__)
 
@@ -63,10 +63,9 @@ DEFAULTS: dict[str, Any] = {
         "timeout": 8.0,
     },
     "ai": {                          # OPCIONAL — desligado por padrão
-        "enabled": False,
-        "provider": "gemini",       # 'gemini' | 'ollama'
-        "gemini_key": "",           # prefira a variável GEMINI_API_KEY
-        "gemini_model": "gemini-2.5-flash",
+        "mode": "off",              # 'off' | 'gemini' | 'ollama' — SÓ a IA escolhida entra na cadeia de tradução
+        "gemini_key": "",           # guardada CIFRADA ({"enc": ...}, ver vault.py); "" = sem chave
+        "gemini_model": "gemini-3.5-flash-lite",
         "ollama_url": "http://localhost:11434",
         "ollama_model": "llama3.2",
         "context": "",              # ex.: "RPG medieval; personagens: Nina, Kael"
@@ -131,6 +130,7 @@ class Settings:
     # -- io
     def load(self) -> None:
         with self._lock:
+            raw = None
             try:
                 raw = json.loads(self.path.read_text(encoding="utf-8"))
                 if isinstance(raw, dict):
@@ -140,8 +140,33 @@ class Settings:
             except (OSError, ValueError) as exc:
                 log.warning("settings.json inválido, usando padrões: %s", exc)
             self._sanitize()
+            dirty = False
+            if isinstance(raw, dict):
+                rai = raw.get("ai") if isinstance(raw.get("ai"), dict) else {}
+                if rai and "mode" not in rai:        # 4.0.5 e antes: ai.enabled + ai.provider → ai.mode
+                    prov = rai.get("provider") if rai.get("provider") in ("gemini", "ollama") else "gemini"
+                    self.data["ai"]["mode"] = prov if rai.get("enabled") else "off"
+                    dirty = True
+            plain_found = False
+            for p in SECRET_PATHS:                   # chave em texto puro (versões antigas) → cifra e apaga o texto puro
+                v = self.get(p)
+                if isinstance(v, str) and v.strip():
+                    try:
+                        self.set(p, vault.protect(v.strip(), p, self.path.parent), save=False)
+                        plain_found = dirty = True
+                    except Exception as exc:  # noqa: BLE001
+                        log.error("não foi possível cifrar %s: %s", p, type(exc).__name__)
+                elif not (v == "" or vault.is_blob(v)):
+                    self.set(p, "", save=False)
+                    dirty = True
+            if dirty:
+                self.save(wipe=plain_found)
+                if plain_found:
+                    log.info("chaves de API migradas para o formato cifrado")
 
-    def save(self) -> None:
+    def save(self, wipe: bool = False) -> None:
+        """Gravação atômica (arquivo temporário + replace). wipe=True: antes, sobrescreve o arquivo antigo com zeros
+        (melhor esforço — SSD/sistema de arquivos podem manter cópias) e apaga sobras .tmp/.bak."""
         with self._lock:
             self._sanitize()
             try:
@@ -150,12 +175,57 @@ class Settings:
                 tmp.write_text(json.dumps(self.data, ensure_ascii=False, indent=2), encoding="utf-8")
                 if os.name != "nt":
                     try:
-                        os.chmod(tmp, 0o600)  # pode conter chaves de API
+                        os.chmod(tmp, 0o600)
                     except OSError:
                         pass
+                if wipe:
+                    _overwrite(self.path)
                 tmp.replace(self.path)
+                if wipe:
+                    for extra in leftover_files(self.path):
+                        _overwrite(extra)
+                        try:
+                            extra.unlink()
+                        except OSError:
+                            pass
             except OSError as exc:
                 log.error("não foi possível salvar settings: %s", exc)
+
+    # -- segredos (cifrados em disco; texto puro só na hora do uso)
+    def secret(self, path: str) -> str:
+        """Texto puro do segredo, ou "" se não houver/se não puder ser aberto neste PC."""
+        v = self.get(path)
+        if isinstance(v, str):
+            return v.strip()        # só sobra texto puro se a cifragem falhou na migração (o valor continua valendo)
+        if not vault.is_blob(v):
+            return ""
+        try:
+            return vault.unprotect(v, self.path.parent)
+        except vault.VaultError:
+            return ""
+
+    def secret_state(self, path: str) -> str:
+        """'none' | 'ok' | 'unreadable' (cifrada em outro PC/usuário ou adulterada)."""
+        v = self.get(path)
+        if isinstance(v, str):
+            return "ok" if v.strip() else "none"
+        if not vault.is_blob(v):
+            return "none"
+        try:
+            vault.unprotect(v, self.path.parent)
+            return "ok"
+        except vault.VaultError:
+            return "unreadable"
+
+    def set_secret(self, path: str, plain: str, wipe: bool = False) -> None:
+        if path not in SECRET_PATHS:
+            raise KeyError(path)
+        old = self.get(path)
+        plain = (plain or "").strip()
+        self.set(path, vault.protect(plain, path, self.path.parent) if plain else "", save=False)
+        if vault.is_blob(old):
+            vault.forget(old)
+        self.save(wipe=wipe or not plain)
 
     def _sanitize(self) -> None:
         d = self.data
@@ -171,6 +241,10 @@ class Settings:
         lang = self.data["ui"].get("language")
         if not (isinstance(lang, str) and (lang == "auto" or LANG_CODE_RE.fullmatch(lang))):
             self.data["ui"]["language"] = "auto"      # só 'auto' ou um código simples (a lista real fica no front-end)
+        if self.data["ai"].get("mode") not in ("off", "gemini", "ollama"):
+            self.data["ai"]["mode"] = "off"
+        if not isinstance(self.data["ai"].get("gemini_model"), str) or not self.data["ai"]["gemini_model"].strip():
+            self.data["ai"]["gemini_model"] = DEFAULTS["ai"]["gemini_model"]
         if self.data["ui"].get("material") not in ("auto", "mica", "acrylic", "none"):
             self.data["ui"]["material"] = "auto"
         if self.data["ui"].get("reduce_motion") not in ("system", "on", "off"):
@@ -210,8 +284,37 @@ class Settings:
 
     # -- chaves de API (nunca escritas em log)
     def gemini_key(self) -> str:
-        return (self.get("ai.gemini_key", "") or os.environ.get("GEMINI_API_KEY")
+        return (self.secret("ai.gemini_key") or os.environ.get("GEMINI_API_KEY")
                 or os.environ.get("GOOGLE_API_KEY") or "").strip()
+
+
+def _overwrite(p: Path) -> None:
+    """Melhor esforço: sobrescreve o conteúdo com zeros antes de substituir/apagar."""
+    try:
+        n = p.stat().st_size
+        if n:
+            with open(p, "r+b") as fh:
+                fh.write(b"\0" * n)
+                fh.flush()
+                os.fsync(fh.fileno())
+    except OSError:
+        pass
+
+
+def leftover_files(settings_path: Path) -> list[Path]:
+    """Cópias que poderiam guardar texto antigo: settings.tmp, settings.json.bak, settings.json~, settings*.old…"""
+    d, stem, name = settings_path.parent, settings_path.stem, settings_path.name
+    out = []
+    try:
+        for f in d.iterdir():
+            if f == settings_path or not f.is_file():
+                continue
+            if f.name.startswith((stem + ".", name)) and f.suffix.lower() in (".tmp", ".bak", ".old", ".orig", ".swp") \
+                    or f.name in (name + "~",):
+                out.append(f)
+    except OSError:
+        pass
+    return out
 
 
 # ---------------------------------------------------------------- API (v4)
@@ -237,10 +340,15 @@ EDITABLE_PATHS = frozenset(p for p in _leaf_paths(DEFAULTS) if p.split(".")[0] i
 def public_view(settings: "Settings") -> dict:
     """Cópia das configurações para a UI: chaves secretas viram máscara (ou vazio se não definidas)."""
     data = settings.section_all()
+    states = {}
     for p in SECRET_PATHS:
         sec, key = p.split(".")
-        data[sec][key] = MASK if data[sec].get(key) else ""
+        st = settings.secret_state(p)
+        states[p] = st
+        data[sec][key] = MASK if st == "ok" else ""      # nunca devolve a chave (nem o blob cifrado)
+    data["secrets"] = {"state": states, "scheme": vault.scheme(settings.path.parent)}
     data["ai"]["env_key_found"] = bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+    data["ai"]["env_key_names"] = [n for n in ("GEMINI_API_KEY", "GOOGLE_API_KEY") if os.environ.get(n)]
     data["config_path"] = str(settings.path)
     return data
 
@@ -248,10 +356,16 @@ def public_view(settings: "Settings") -> dict:
 def apply_changes(settings: "Settings", changes: dict[str, Any]) -> list[str]:
     """Aplica {'a.b': valor}. Ignora caminhos desconhecidos e máscaras. Retorna os caminhos alterados."""
     changed = []
+    secrets_changed: list[tuple[str, str]] = []
     for path, value in changes.items():
         if path not in EDITABLE_PATHS:
             raise KeyError(path)
-        if path in SECRET_PATHS and value == MASK:
+        if path in SECRET_PATHS:
+            if value == MASK:
+                continue
+            if not isinstance(value, str):
+                raise ValueError(f"{path}: esperado texto")
+            secrets_changed.append((path, value))
             continue
         ref = settings.get(path)
         if isinstance(ref, bool) and not isinstance(value, bool):
@@ -267,4 +381,7 @@ def apply_changes(settings: "Settings", changes: dict[str, Any]) -> list[str]:
         changed.append(path)
     if changed:
         settings.save()
+    for path, value in secrets_changed:
+        settings.set_secret(path, value)
+        changed.append(path)
     return changed

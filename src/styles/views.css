@@ -141,9 +141,27 @@
 .intro-bg { position: absolute; inset: 0; background: radial-gradient(900px 600px at 50% 40%, #2a2f78 0%, #1c1f44 55%, #0e1030 100%); }
 .intro-stage { position: relative; width: 360px; height: 360px; display: grid; place-items: center; }
 .intro-nina { position: relative; width: 250px; height: 250px; border-radius: 56px; box-shadow: 0 30px 70px -18px rgba(106, 0, 255, .75), 0 0 0 1px rgba(255, 255, 255, .12); }
-.intro-glow { position: absolute; width: 330px; height: 330px; border-radius: 50%; background: conic-gradient(from 0deg, #6a00ff, #de0088, #ffaa44, #44ffaa, #44ccff, #6a00ff); filter: blur(46px); animation: spin 9s linear infinite; }
-.intro-orbit { position: absolute; inset: 0; animation: spin 14s linear infinite; }
-.intro-orbit i { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; animation: twinkle 1.8s ease-in-out infinite; }
+.intro-glow-wrap { position: absolute; width: 330px; height: 330px; display: block; will-change: transform, opacity; }
+.intro-glow { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, #6a00ff, #de0088, #ffaa44, #44ffaa, #44ccff, #6a00ff); filter: blur(46px); animation: spin 9s linear infinite; will-change: transform; }
+/* as luzes giram sem parar até a intro acabar (o fim é decidido pelo fim da música) */
+.intro-orbit { position: absolute; inset: 0; animation: spin 14s linear infinite; will-change: transform; }
+.intro-grow { position: relative; display: grid; place-items: center; transform-origin: 50% 50%; will-change: transform;
+  animation: intro-grow var(--intro-ms, 7060ms) cubic-bezier(.45, 0, .25, 1) both; }
+.intro-halo { position: absolute; width: 270px; height: 270px; border-radius: 64px; background: radial-gradient(closest-side, rgba(170, 110, 255, .55), rgba(106, 0, 255, 0) 100%);
+  filter: blur(18px); opacity: .35; animation: intro-halo 2.4s ease-in-out infinite; will-change: opacity; }
+@keyframes intro-grow { from { transform: scale(1); } to { transform: scale(1.07); } }
+@keyframes intro-halo { 0%, 100% { opacity: .3; } 50% { opacity: .85; } }
+/* movimento reduzido: sem rotação e quase sem crescer */
+html[data-motion='reduce'] .intro-orbit, html[data-motion='reduce'] .intro-glow { animation: none !important; }
+html[data-motion='reduce'] .intro-grow { animation: none !important; transform: scale(1.01); }
+html[data-motion='reduce'] .intro-halo { animation: none !important; opacity: .5; }
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion='auto'] .intro-orbit, html[data-motion='auto'] .intro-glow { animation: none !important; }
+  html[data-motion='auto'] .intro-grow { animation: none !important; transform: scale(1.01); }
+  html[data-motion='auto'] .intro-halo { animation: none !important; opacity: .5; }
+}
+.intro-orbit i { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px; }
+.intro-orbit b { display: block; width: 100%; height: 100%; border-radius: 50%; animation: twinkle 1.8s ease-in-out infinite; will-change: transform, opacity; }
 .intro-title { position: relative; font-size: 38px; font-weight: 750; letter-spacing: -.02em; margin-top: 10px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 24px rgba(106, 0, 255, .5)); }
 .intro-sub { position: relative; color: var(--text-dim); font-size: 13.5px; letter-spacing: .04em; }
 .intro-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--grad); transform-origin: left; }

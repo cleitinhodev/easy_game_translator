@@ -22,7 +22,7 @@ for pkg in ("langdetect", "speech_recognition", "gtts", "certifi"):
     except Exception:
         pass
 hiddenimports += ["egt.components." + m for m in ("net", "download", "store", "sysinfo", "base", "defs", "service", "demo")]
-hiddenimports += ["egt.server.app", "egt.server.run", "egt.demo", "mss", "PIL.ImageGrab", "cv2", "yaml"]
+hiddenimports += ["egt.server.app", "egt.server.run", "egt.vault", "egt.secret_wipe", "egt.demo", "mss", "PIL.ImageGrab", "cv2", "yaml"]
 
 a = Analysis(
     ["main.py"], pathex=["."], binaries=binaries, datas=datas, hiddenimports=hiddenimports, hookspath=[],

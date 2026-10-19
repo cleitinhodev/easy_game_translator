@@ -183,8 +183,8 @@ class AppController:
             hint = "en"
         return {"ocr_engine": p.ocr_engine, "alphabet": p.alphabet, "src_lang": hint, "tgt": p.target,
                 "translation_enabled": list(s.get("translation.enabled", []) or []),
-                "ai_enabled": bool(s.get("ai.enabled", False)), "ai_provider": s.get("ai.provider", ""),
-                "ollama_model": s.get("ai.ollama_model", "")}
+                "ai_enabled": s.get("ai.mode", "off") != "off", "ai_provider": s.get("ai.mode", "off"),
+                "gemini_key": bool(s.gemini_key()), "ollama_model": s.get("ai.ollama_model", "")}
 
     def _components_changed(self, comp_id: str) -> None:
         if comp_id in ("tesseract", "tessdata", "rapidocr", "easyocr", "paddleocr", "winocr", "opencv"):

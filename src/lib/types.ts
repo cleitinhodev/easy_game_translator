@@ -46,7 +46,8 @@ export interface Settings {
   filters: { stable_ms: number; max_wait_ms: number; min_chars: number; min_alnum_ratio: number; min_confidence: number; diff_mean: number; similarity: number }
   ocr: { engine: string; tesseract_path: string; tesseract_psm: number; easyocr_gpu: boolean }
   translation: { order: string[]; enabled: string[]; cache_only: boolean; libre_url: string; libre_key: string; lingva_url: string; microsoft_key: string; microsoft_region: string; timeout: number }
-  ai: { enabled: boolean; provider: 'gemini' | 'ollama'; gemini_key: string; gemini_model: string; ollama_url: string; ollama_model: string; context: string; env_key_found: boolean }
+  ai: { mode: 'off' | 'gemini' | 'ollama'; gemini_key: string; gemini_model: string; ollama_url: string; ollama_model: string; context: string; env_key_found: boolean; env_key_names?: string[] }
+  secrets?: { state: Record<string, 'none' | 'ok' | 'unreadable'>; scheme: string }
   box: { alpha: number; borderless: boolean; click_through: boolean; auto_font: boolean; font_size: number; text_color: string; bg_color: string; show_original: boolean; exclude_from_capture: boolean }
   hotkeys: { enabled: boolean; toggle: string; translate_now: string; toggle_box: string }
   config_path: string

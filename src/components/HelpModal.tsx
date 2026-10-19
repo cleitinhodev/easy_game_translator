@@ -67,7 +67,7 @@ export function HelpModal() {
   const t = useT()
   const open = useStore((s) => s.modal === 'help')
   const setModal = useStore((s) => s.setModal)
-  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.0.5')
+  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.0.6')
   const links: [string, string, string][] = [
     [t('help.website'), LINKS.website, 'site'], [t('help.tutorial'), LINKS.tutorial, 'tut'], [t('help.donate'), LINKS.donate, 'don'],
     [t('help.channel'), LINKS.channel, 'yt'], [t('help.support'), LINKS.patreon, 'pat'], [t('help.projects'), LINKS.github, 'git'],

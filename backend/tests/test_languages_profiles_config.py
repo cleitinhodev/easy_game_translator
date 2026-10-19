@@ -69,7 +69,7 @@ def test_profile_sanitizes_and_accepts_v2_names():
 def test_settings(tmp_path):
     f = tmp_path / "s.json"
     s = config.Settings(f)
-    assert s.get("ai.enabled") is False and s.get("ui.language") == "auto"
+    assert s.get("ai.mode") == "off" and s.get("ai.gemini_model") == "gemini-3.5-flash-lite" and s.get("ui.language") == "auto"
     s.set("capture.interval", 99)
     s.set("ai.gemini_key", "dummy")
     s2 = config.Settings(f)

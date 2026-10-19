@@ -162,32 +162,42 @@ def engine_factories(settings) -> dict:
     factories = {
         "google": lambda: GoogleTranslate(),
         "mymemory": lambda: MyMemoryTranslate(timeout=timeout),
-        "libre": lambda: LibreTranslate(tr.get("libre_url", ""), tr.get("libre_key", ""), timeout),
+        "libre": lambda: LibreTranslate(tr.get("libre_url", ""), settings.secret("translation.libre_key"), timeout),
         "lingva": lambda: LingvaTranslate(tr.get("lingva_url", ""), timeout),
-        "microsoft": lambda: MicrosoftTranslate(tr.get("microsoft_key", ""), tr.get("microsoft_region", "")),
+        "microsoft": lambda: MicrosoftTranslate(settings.secret("translation.microsoft_key"), tr.get("microsoft_region", "")),
         "argos": lambda: ArgosTranslate(),
     }
     return factories
 
 
-def build_engines(settings, ai_enabled: Optional[bool] = None) -> list[Translator]:
-    """Monta a lista ordenada de motores a partir das configurações (sem I/O de rede)."""
+AI_MODES = ("off", "gemini", "ollama")
+
+
+def ai_engine(settings, mode: str):
+    """O motor de IA de `mode` ('gemini' | 'ollama'), ou None. Nunca cria o outro."""
     from .ai import GeminiTranslate, OllamaTranslate
+    ai = settings.section("ai")
+    ctx = lambda: settings.get("ai.context", "")  # noqa: E731
+    if mode == "ollama":
+        return OllamaTranslate(ai.get("ollama_url", ""), ai.get("ollama_model", ""), ctx)
+    if mode == "gemini":
+        return GeminiTranslate(settings.gemini_key, ai.get("gemini_model") or "gemini-3.5-flash-lite", ctx)
+    return None
+
+
+def build_engines(settings, ai_mode: Optional[str] = None) -> list[Translator]:
+    """Monta a lista ordenada de motores a partir das configurações (sem I/O de rede).
+    Só a IA selecionada em ai.mode entra (na frente); 'off' = nenhuma IA."""
     factories = engine_factories(settings)
     tr = settings.section("translation")
     enabled = set(tr.get("enabled", []))
     order = [e for e in tr.get("order", []) if e in factories]
     order += [e for e in factories if e not in order]
     out: list[Translator] = [factories[e]() for e in order if e in enabled]
-
-    ai = settings.section("ai")
-    use_ai = ai.get("enabled", False) if ai_enabled is None else ai_enabled
-    if use_ai:
-        ctx = lambda: settings.get("ai.context", "")  # noqa: E731
-        if ai.get("provider") == "ollama":
-            out.insert(0, OllamaTranslate(ai.get("ollama_url", ""), ai.get("ollama_model", ""), ctx))
-        else:
-            out.insert(0, GeminiTranslate(settings.gemini_key, ai.get("gemini_model", "gemini-2.5-flash"), ctx))
+    mode = settings.get("ai.mode", "off") if ai_mode is None else ai_mode
+    eng = ai_engine(settings, mode) if mode in AI_MODES else None
+    if eng is not None:
+        out.insert(0, eng)
     return out
 
 

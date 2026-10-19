@@ -6,6 +6,7 @@ import { Button, Chip, Switch, TextInput } from '@/components/ui'
 import { useStore, useT } from '@/store'
 import type { TrEngine } from '@/lib/types'
 import { Result, Row, Section } from './parts'
+import { useRemoveSecret } from './Ai'
 
 export function TranslationTab() {
   const t = useT()
@@ -18,6 +19,14 @@ export function TranslationTab() {
   const tr = s.translation
   const [servers, setServers] = useState({ libre_url: tr.libre_url, libre_key: tr.libre_key, lingva_url: tr.lingva_url, microsoft_key: tr.microsoft_key, microsoft_region: tr.microsoft_region })
   const [saved, setSaved] = useState(false)
+  const removeSecret = useRemoveSecret()
+  const [keyMsg, setKeyMsg] = useState<{ ok: boolean; text: (tt: typeof t) => string } | null>(null)
+  const keyState = (p: string) => s.secrets?.state[p] ?? 'none'
+  const removeKey = async (p: 'libre_key' | 'microsoft_key') => {
+    const r = await removeSecret(`translation.${p}`, t('ai.key_remove_confirm_other'))
+    if (!r) return
+    setServers((v) => ({ ...v, [p]: '' })); setKeyMsg(r); refreshEngines()
+  }
   const [argos, setArgos] = useState<{ installed: boolean; pairs: string[][] } | null>(null)
   const [argosBusy, setArgosBusy] = useState(false)
   const [argosMsg, setArgosMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -90,11 +99,12 @@ export function TranslationTab() {
 
       <Section title={t('tr.servers')} desc={t('tr.keys_note', { path: s.config_path })}>
         <Row label="LibreTranslate URL"><TextInput value={servers.libre_url} onChange={(e) => setServers({ ...servers, libre_url: e.target.value })} style={{ width: 300 }} /></Row>
-        <Row label="LibreTranslate key"><TextInput type="password" value={servers.libre_key} onChange={(e) => setServers({ ...servers, libre_key: e.target.value })} style={{ width: 300 }} autoComplete="off" /></Row>
+        <Row label="LibreTranslate key"><div className="input-row"><TextInput type="password" value={servers.libre_key} onChange={(e) => setServers({ ...servers, libre_key: e.target.value })} style={{ width: 300 }} autoComplete="off" />{keyState('translation.libre_key') !== 'none' && <Button size="sm" variant="danger" onClick={() => removeKey('libre_key')}>{t('ai.key_remove')}</Button>}</div></Row>
         <Row label="Lingva URL"><TextInput value={servers.lingva_url} onChange={(e) => setServers({ ...servers, lingva_url: e.target.value })} style={{ width: 300 }} /></Row>
-        <Row label="Azure key" hint={t('tr.ms_tip')}><TextInput type="password" value={servers.microsoft_key} onChange={(e) => setServers({ ...servers, microsoft_key: e.target.value })} style={{ width: 300 }} autoComplete="off" /></Row>
+        <Row label="Azure key" hint={t('tr.ms_tip')}><div className="input-row"><TextInput type="password" value={servers.microsoft_key} onChange={(e) => setServers({ ...servers, microsoft_key: e.target.value })} style={{ width: 300 }} autoComplete="off" />{keyState('translation.microsoft_key') !== 'none' && <Button size="sm" variant="danger" onClick={() => removeKey('microsoft_key')}>{t('ai.key_remove')}</Button>}</div></Row>
         <Row label="Azure region"><TextInput value={servers.microsoft_region} onChange={(e) => setServers({ ...servers, microsoft_region: e.target.value })} style={{ width: 180 }} /></Row>
         <div className="input-row"><Button variant="primary" onClick={saveServers}>{saved ? `✔ ${t('saved')}` : t('common.save')}</Button></div>
+        <AnimatePresence initial={false}>{keyMsg && <Result ok={keyMsg.ok}>{keyMsg.text(t)}</Result>}</AnimatePresence>
       </Section>
 
       <Section title={t('tr.argos')} desc={argos && !argos.installed ? t('tr.argos_missing') : argos ? t('tr.argos_pairs', { n: argos.pairs.length, pairs: argos.pairs.map((p) => p.join('→')).join(', ') || '—' }) : ''}>

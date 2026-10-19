@@ -1,4 +1,6 @@
 'use strict'
+// chaves de API nunca entram nas mensagens de erro do backend (defesa extra; o Python já filtra os logs)
+const redactKeys = (t) => String(t).replace(/AIza[0-9A-Za-z_-]{20,}/g, '[chave removida]').replace(/\bsk-[A-Za-z0-9_-]{16,}/g, '[chave removida]')
 // Inicia/encerra o backend Python (FastAPI) e descobre porta + token da sessão.
 const { spawn, spawnSync } = require('node:child_process')
 const crypto = require('node:crypto')
@@ -81,13 +83,13 @@ class Backend extends EventEmitter {
               resolve({ port: this.port, token: this.token })
             } catch (e) { fail(e) }
           } else if (line) {
-            this.stderr.push(line); if (this.stderr.length > 200) this.stderr.shift()
+            this.stderr.push(redactKeys(line)); if (this.stderr.length > 200) this.stderr.shift()
           }
         }
       })
       proc.stderr.setEncoding('utf8')
       proc.stderr.on('data', (c) => {
-        for (const l of String(c).split(/\r?\n/)) if (l) { this.stderr.push(l); if (this.stderr.length > 200) this.stderr.shift() }
+        for (const l of String(c).split(/\r?\n/)) if (l) { this.stderr.push(redactKeys(l)); if (this.stderr.length > 200) this.stderr.shift() }
       })
       proc.on('error', fail)
       proc.on('exit', (code, sig) => {

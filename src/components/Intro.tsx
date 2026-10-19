@@ -46,19 +46,27 @@ export function Intro({ show, full = true, onDone }: { show: boolean; full?: boo
   return (
     <AnimatePresence>
       {show && (
-        <motion.div className="intro" onClick={() => skipRef.current()} role="presentation" initial={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.04, filter: 'blur(8px)' }} transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}>
+        <motion.div className="intro" style={{ ['--intro-ms' as string]: `${ms}ms` }} onClick={() => skipRef.current()} role="presentation" initial={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.04, filter: 'blur(8px)' }} transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}>
           <div className="intro-bg" aria-hidden />
           <div className="intro-stage">
             <div className="intro-orbit" aria-hidden>
-              {orbit.map((o, i) => <i key={i} style={{ transform: `rotate(${o.a}deg) translateY(-168px)`, background: o.c, animationDelay: `${i * 70}ms` }} />)}
+              {/* posição no anel no <i>; o piscar (escala/opacidade) no <b> interno — senão a animação apaga o rotate/translate */}
+              {orbit.map((o, i) => <i key={i} style={{ transform: `rotate(${o.a}deg) translateY(-168px)` }}><b style={{ background: o.c, color: o.c, animationDelay: `${i * 70}ms` }} /></i>)}
             </div>
-            <motion.span className="intro-glow" aria-hidden initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: [0, 0.9, 0.55], scale: [0.6, 1.15, 1] }} transition={{ duration: 1.6 }} />
-            <motion.img src={ninaPng} alt="Nina" draggable={false} className="intro-nina" initial={{ opacity: 0, scale: 0.55, rotate: -6, y: 20 }} animate={{ opacity: 1, scale: [0.55, 1.04, 1], rotate: 0, y: 0 }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }} />
+            {/* entrada (motion) por fora; a rotação contínua (CSS) fica num elemento interno, para uma não anular a outra */}
+            <motion.span className="intro-glow-wrap" aria-hidden initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: [0, 0.9, 0.6], scale: [0.6, 1.15, 1] }} transition={{ duration: 1.6 }}>
+              <span className="intro-glow" />
+            </motion.span>
+            {/* a logo cresce devagar durante toda a intro (1,0 → 1,07), com um brilho pulsando por trás */}
+            <div className="intro-grow" data-testid="intro-grow">
+              <span className="intro-halo" aria-hidden />
+              <motion.img src={ninaPng} alt="Nina" draggable={false} className="intro-nina" initial={{ opacity: 0, scale: 0.55, rotate: -6, y: 20 }} animate={{ opacity: 1, scale: [0.55, 1.04, 1], rotate: 0, y: 0 }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }} />
+            </div>
           </div>
           <motion.h1 className="intro-title" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.7, ease: [0.22, 0.9, 0.24, 1] }}>
             {t('intro.welcome')}
           </motion.h1>
-          <motion.p className="intro-sub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.15, duration: 0.7 }}>Easy Game Translator · v4.0.5 by CleitinhoDEV</motion.p>
+          <motion.p className="intro-sub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.15, duration: 0.7 }}>Easy Game Translator · v4.0.6 by CleitinhoDEV</motion.p>
           <motion.span className="intro-progress" aria-hidden initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: ms / 1000, ease: 'linear' }} />
           <motion.span className="intro-skip" initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ delay: 1.6 }}>{t('intro.skip')}</motion.span>
         </motion.div>

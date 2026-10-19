@@ -88,7 +88,12 @@ def install(ctrl) -> None:
     ctrl.grabber = DemoGrabber(period=float(os.environ.get("EGT_DEMO_PERIOD", "7")))
     ctrl.pipeline.capture_fn = ctrl.grabber.grab
     eng = DemoEngine()
-    ctrl.manager._engines = lambda: [eng]
+    from .translate.manager import ai_engine
+
+    def engines():                                  # a IA selecionada (só ela) continua valendo na demonstração
+        ai = ai_engine(ctrl.settings, ctrl.settings.get("ai.mode", "off"))
+        return ([ai] if ai is not None else []) + [eng]
+    ctrl.manager._engines = engines
     ctrl.check_network = lambda force=False: setattr(ctrl, "net", "online") or "online"  # type: ignore[method-assign]
     ctrl.net = "online"
     try:                                        # gerenciador de componentes com fontes "oficiais" fictícias

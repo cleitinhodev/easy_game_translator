@@ -170,7 +170,7 @@ export const useStore = create<State>((set, get) => {
       if (window.egt) cfg = await window.egt.getConfig()
       else {
         const q = new URLSearchParams(location.search)   // modo navegador (testes/dev sem Electron)
-        cfg = { port: Number(q.get('port')), token: q.get('token') || '', platform: 'linux', version: '4.0.5', isDev: true, material: 'none', appOrigin: '', e2e: false, userData: '' }
+        cfg = { port: Number(q.get('port')), token: q.get('token') || '', platform: 'linux', version: '4.0.6', isDev: true, material: 'none', appOrigin: '', e2e: false, userData: '' }
       }
       configureApi(cfg.port, cfg.token)
       set({ appVersion: cfg.version || '' })

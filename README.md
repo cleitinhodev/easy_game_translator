@@ -23,7 +23,8 @@ Funciona **offline** depois de instalado (OCR local, cache de traduções e moto
   excluída de prints/gravações (para o OCR não ler a própria tradução).
 - **Canal duplo**: duas regiões ao mesmo tempo (ex.: chat + legenda).
 - **Perfis por jogo**, **glossário/substituições**, histórico (exportar TXT/CSV/JSON), atalhos globais configuráveis.
-- **IA opcional** (desligada por padrão): Gemini ou Ollama local para revisar traduções.
+- **IA opcional** (desligada por padrão): **Gemini** ou **Ollama** local — só a escolhida entra na tradução.
+- **Privacidade**: capturas e OCR ficam no seu PC; chaves de API ficam **criptografadas** e presas a este computador (veja [Segurança e privacidade](#segurança-e-privacidade)).
 - **Gerenciador de componentes** (Opções › Atualizações): instala só o que você escolher usar, com tamanho, confirmação e progresso.
 - **Interface em 20 idiomas** (pt-BR, en, es, fr, de, it, ru, uk, pl, tr, nl, id, vi, th, ar com RTL, hi, ja, ko, zh-CN, zh-TW).
 - **14 fontes** para o texto traduzido (de sistema + 7 embutidas sob OFL), com alternativas para CJK, árabe, tailandês, hindi e cirílico.
@@ -189,6 +190,52 @@ Outra opção: deixe a tradução na janela principal, em outro monitor.
 É o SmartScreen avisando que o programa **não tem assinatura digital** (certificado pago). Baixe só dos [Releases](../../releases/latest),
 confira o SHA-256 e clique em **Mais informações → Executar assim mesmo**.
 
+## Segurança e privacidade
+
+**O que fica só no seu computador**
+
+- **Capturas de tela**: são lidas na memória e o OCR roda **localmente** (RapidOCR/Tesseract/EasyOCR). Nenhuma imagem é
+  enviada para lugar nenhum nem salva em disco.
+- **Histórico, cache de traduções, perfis, glossário e configurações**: na pasta de configuração do usuário
+  (Windows: `%APPDATA%\EasyGameTranslator`; Linux: `~/.config/EasyGameTranslator`). Não há telemetria.
+- **Chaves de API** (Gemini, Azure/Microsoft, LibreTranslate): guardadas **criptografadas** (detalhes abaixo), nunca escritas em
+  log, nunca devolvidas para a interface (aparecem como `••••••••`) e fora de exportações de histórico/perfis.
+
+**O que é enviado, e para onde**
+
+- Ao traduzir com um tradutor **online** (Google, MyMemory, LibreTranslate, Lingva, Microsoft), vai **só o texto reconhecido**
+  pelo OCR para o serviço escolhido — **nunca imagens**. Com Argos (offline) ou modo **somente cache**, nada sai do PC.
+- **Gemini** (se você escolher): vai só o texto reconhecido (e o "contexto do jogo", se preenchido) para a API do Google; a
+  chave segue no cabeçalho da requisição HTTPS. **Acompanhe você mesmo o consumo de tokens e os limites da sua chave** no site
+  oficial: <https://aistudio.google.com>. O uso e eventuais custos são de sua responsabilidade.
+- **Ollama**: roda no seu PC (`http://localhost:11434`); nada sai do computador, a não ser que você aponte para outro endereço.
+- Opcionais manuais: o ditado por voz usa o reconhecimento do Google (envia o áudio) e a narração usa o gTTS (envia o texto).
+
+**Como as chaves são criptografadas**
+
+| Sistema | Como fica guardada | Proteção |
+|---|---|---|
+| **Windows** | DPAPI do Windows (`CryptProtectData`, escopo do usuário atual, entropia própria do app) | Só o **mesmo usuário do Windows, neste PC**, consegue abrir. Copiar o `settings.json` para outro PC/usuário não funciona. |
+| **Linux** (com chaveiro) | Chaveiro do sistema (Secret Service, se o pacote `keyring` estiver instalado e houver um chaveiro ativo) | O arquivo guarda só uma referência; a chave fica no chaveiro da sua sessão. |
+| **Linux** (sem chaveiro) | AES-256-GCM com chave derivada (scrypt) do `/etc/machine-id` + seu usuário + um sal aleatório em `vault.salt` (permissão 0600) | **Mais fraca que o DPAPI**: impede que uma cópia do arquivo funcione em outro PC, mas **não** protege contra alguém que já tenha acesso à sua conta neste computador. |
+
+Na primeira abertura da 4.0.6, chaves antigas em texto puro são criptografadas e o texto puro é apagado (gravação atômica, sem
+cópias `.bak`/`.tmp`). Se a chave salva não puder ser aberta (outro PC, outro usuário, arquivo alterado), o programa avisa
+**"A chave salva não pode ser lida neste computador. Cole a chave novamente."** e segue sem ela.
+
+**Como remover a chave**
+
+Em **Opções › IA › Gemini › Remover chave** (ou **Opções › Tradução** para as chaves do Azure/LibreTranslate), confirme e o
+programa: regrava as configurações sem a chave (sobrescrevendo a cópia antiga), apaga sobras `.tmp`/`.bak`, procura a chave em
+logs e arquivos da pasta de configuração e a substitui por `[chave removida]`, e limpa a chave da memória do backend. Se a chave
+vier da variável de ambiente `GEMINI_API_KEY`/`GOOGLE_API_KEY`, o programa avisa; no Windows ele oferece (com uma segunda
+confirmação) apagar a variável **do seu usuário** (`HKCU\Environment`). Variáveis **do sistema** (HKLM) nunca são alteradas —
+remova-as manualmente como administrador.
+
+Limites honestos: a sobrescrita é "melhor esforço" (SSDs e sistemas de arquivos com journaling podem manter cópias antigas em
+setores livres), e o Python não permite zerar strings na memória — a chave fica na memória só durante o uso e some quando o
+processo termina.
+
 ## Como usar
 
 1. Abra o jogo (de preferência em **janela sem borda** — tela cheia exclusiva não permite janelas por cima).
@@ -270,9 +317,9 @@ O executável do backend tem um autoteste oculto: `EGTBackend.exe --selftest` (l
 Segurança: o backend só escuta em `127.0.0.1`, exige o token em **toda** rota (header `X-EGT-Token`; `?token=` no WebSocket),
 valida o header `Host` (anti DNS-rebinding) e a origem (CORS) e mascara chaves secretas nas respostas.
 O renderer roda com `contextIsolation`, `sandbox`, `nodeIntegration` desligado e CSP estrita; links externos só `https`.
-**Nenhuma chave de API vai no projeto**: chaves (Gemini/Azure/Libre) vêm de variável de ambiente
-(`GEMINI_API_KEY`) ou das Opções, e ficam só na pasta de configuração do usuário
-(Windows: `%APPDATA%\EasyGameTranslator`; Linux: `~/.config/EasyGameTranslator`).
+**Nenhuma chave de API vai no projeto**: chaves (Gemini/Azure/Libre) vêm das Opções (guardadas criptografadas — DPAPI no
+Windows) ou da variável de ambiente `GEMINI_API_KEY`, e ficam só na pasta de configuração do usuário
+(Windows: `%APPDATA%\EasyGameTranslator`; Linux: `~/.config/EasyGameTranslator`). Veja [Segurança e privacidade](#segurança-e-privacidade).
 
 ## Estrutura
 
@@ -342,6 +389,10 @@ an optional component manager, **20 UI languages** (including Arabic RTL) and 14
   - *Linux*: no prebuilt release yet — run from source: install git, Node.js 20+, Python 3.10+ (venv, pip), then
     `npm ci && npm run setup:python && npm run dev`; optional AppImage with `npm run dist:linux`. Screen capture needs an
     **X11** session (Wayland usually blocks it). Tested only on Debian 13 / Python 3.13 / X11.
+- **Privacy**: screenshots and OCR stay on your PC; online translators receive only the recognized text (never images).
+  API keys are stored encrypted (Windows DPAPI, bound to your Windows user; on Linux the system keyring or a weaker
+  machine-bound AES-GCM fallback) and can be wiped with *Options › AI › Remove key*. Monitor your own Gemini token usage at
+  <https://aistudio.google.com>.
 - **Build**: `npm install && npm run setup:python && npm run dev`; release build: `npm run build:backend && npm run dist:win`.
 - **Translate the UI**: edit `shared/i18n/<code>.json` (keep `{placeholders}` and product names), run `npm run check:i18n`.
   Non-Portuguese/English locales were machine-assisted and may contain mistakes — fixes are welcome.

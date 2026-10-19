@@ -1,7 +1,7 @@
 {
   "name": "easy-game-translator",
   "productName": "Easy Game Translator",
-  "version": "4.0.5",
+  "version": "4.0.6",
   "description": "Easy Game Translator v4 — tradutor de tela para jogos (Electron + Python)",
   "author": "CleitinhoDEV",
   "license": "GPL-3.0-or-later",

@@ -14,3 +14,5 @@ requests>=2.31
 rapidocr-onnxruntime>=1.3; python_version < "3.13"
 rapidocr>=3.0; python_version >= "3.13"
 onnxruntime>=1.17; python_version >= "3.13"
+# Chaves de API criptografadas: no Windows usa o DPAPI (nativo); no Linux/macOS usa AES-GCM (ou o chaveiro do sistema).
+cryptography>=42; sys_platform != "win32"

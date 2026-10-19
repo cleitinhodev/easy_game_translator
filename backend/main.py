@@ -4,7 +4,7 @@ Uso (o Electron faz isso sozinho):
     python main.py                    # porta aleatória em 127.0.0.1, token aleatório
     python main.py --selftest [arq]   # lê uma imagem gerada com o RapidOCR e sai
 Variáveis: EGT_TOKEN (token da sessão), EGT_PORT (porta fixa; padrão aleatória), EGT_CONFIG_DIR.
-Ao ficar pronto imprime uma linha:  EGT_READY {"port": 12345, "token": "...", "version": "4.0.4"}
+Ao ficar pronto imprime uma linha:  EGT_READY {"port": 12345, "token": "...", "version": "4.0.6"}
 """
 from __future__ import annotations
 
@@ -42,6 +42,13 @@ def _selftest() -> int:
         from egt.server.app import create_app  # noqa: F401
         import fastapi, uvicorn  # noqa: F401,E401
         lines.append("selftest server-imports ok")
+        # cofre das chaves (DPAPI no Windows): ida e volta + adulterado/estrangeiro rejeitados
+        import tempfile as _tf
+        from egt import vault
+        vres = vault.selftest(Path(_tf.mkdtemp(prefix="egt_vault_")))
+        lines.append("selftest vault " + vres)
+        if "roundtrip=True" not in vres or "tamper_rejected=True" not in vres or "foreign_rejected=True" not in vres:
+            code = 4
         # gerenciador de componentes: importa, lista e carrega um módulo colocado na pasta do usuário (prioridade: embutidos primeiro)
         import importlib
         import tempfile

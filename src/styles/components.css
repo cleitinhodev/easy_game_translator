@@ -331,3 +331,19 @@ html[data-material='acrylic'] .app-bg { background-color: rgba(24, 27, 66, .6); 
 /* menu suspenso: largura natural do conteúdo, limitada à janela (posição calculada em placeMenu) */
 .select-menu { width: max-content; box-sizing: border-box; overflow-x: hidden; overscroll-behavior: contain; }
 .select-menu .opt-main { min-width: 0; overflow-wrap: anywhere; }
+
+/* IA: aviso do Gemini, variável de ambiente, status do Ollama (4.0.6) */
+.ai-warn { display: flex; gap: 10px; align-items: flex-start; margin: 2px 0 10px; padding: 10px 12px; border-radius: 12px;
+  background: rgba(255, 204, 77, .09); border: 1px solid rgba(255, 204, 77, .32); color: #ffe7a8; font-size: 12.5px; line-height: 1.45; }
+.ai-warn p { margin: 0 0 4px; }
+.ai-warn-ico { font-size: 15px; line-height: 1.2; color: var(--warn); }
+.ai-warn .link, .ai-env .link { background: none; border: 0; padding: 0; color: var(--cyan); cursor: pointer; font: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.ai-warn .link:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 4px; }
+.ai-env { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin: 6px 0; padding: 8px 11px; border-radius: 10px;
+  background: rgba(120, 160, 255, .07); border: 1px solid rgba(120, 160, 255, .22); }
+.ai-env p { margin: 0; }
+.ai-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted, #9aa3b5); white-space: nowrap; }
+.ai-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #8890a0; }
+.ai-status.up { color: #aef0cb; } .ai-status.up .dot { background: #4cd98a; box-shadow: 0 0 8px rgba(76, 217, 138, .6); }
+.ai-status.down { color: #ffb8c0; } .ai-status.down .dot { background: #ff6b7d; }
+.ai-status.checking .dot { animation: blink .8s steps(2) infinite; }

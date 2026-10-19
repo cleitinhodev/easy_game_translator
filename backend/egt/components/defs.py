@@ -896,7 +896,7 @@ class GeminiComp(Component):
     id, category = "gemini", "ai"
 
     def detect(self, ctx):
-        key = bool(ctx.get_setting("ai.gemini_key", "") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+        key = bool(ctx.usage().get("gemini_key") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
         return Detect(key, "", "", extra={"key": key})
 
     def needed(self, ctx, det):

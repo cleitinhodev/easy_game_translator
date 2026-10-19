@@ -2,13 +2,41 @@
 
 Todas as mudanças das versões 4.x. Datas no formato AAAA-MM-DD.
 
-## Não lançado
+## 4.0.6 — 2026-10-19
 
-- README: bloco **Iniciantes** (passo a passo para Windows e Linux) e **Perguntas frequentes**.
-- Linux a partir do código: `backend/requirements.txt` usa o `rapidocr` v3 no Python 3.13+ (o `rapidocr-onnxruntime` só tem
-  pacotes até o 3.12); o gerenciador de componentes reconhece os dois. Novo `npm run dist:linux` (AppImage).
-- `check:links` também confere os links do README/docs (só https e sites oficiais; âncoras e arquivos; `--online` testa cada link).
-- E2E `scripts/e2e/realcapture.cjs`: captura real de uma região da tela do X com RapidOCR (ou `EGT_OCR=tesseract`).
+- **Chaves de API criptografadas** (Gemini, Azure/Microsoft, LibreTranslate). Windows: **DPAPI** (`CryptProtectData`, escopo do
+  usuário atual, entropia própria do app, sem diálogos) — o `settings.json` guarda `{"enc": "dpapi:v1:…"}` e uma cópia dele não
+  funciona em outro PC/usuário. Linux: chaveiro do sistema (Secret Service) quando disponível; senão AES-256-GCM com chave
+  derivada (scrypt) de `/etc/machine-id` + usuário + sal aleatório em `vault.salt` (0600) — mais fraco que o DPAPI (documentado).
+  Migração automática na 1ª abertura: o texto puro é criptografado e apagado (gravação atômica, sem `.bak`/`.tmp` com a chave).
+  Chave ilegível neste PC → tratada como "sem chave", com o aviso *"A chave salva não pode ser lida neste computador. Cole a
+  chave novamente."*. As chaves nunca vão para log (filtro que mascara padrões de chave em todo log e na aba Reportar Erros),
+  nem para a interface (máscara), exportações ou perfis; o Gemini lê a chave só na hora da chamada.
+- **Remover chave** (Opções › IA e Opções › Tradução), com confirmação: regrava as configurações sem a chave sobrescrevendo a
+  cópia antiga, apaga sobras `.tmp`/`.bak`/`.old`, procura a chave em logs e arquivos da pasta de configuração (texto e SQLite) e
+  troca por `[chave removida]`, limpa o backend (motores e esperas) e a interface. Se houver `GEMINI_API_KEY`/`GOOGLE_API_KEY`,
+  avisa; no Windows oferece (2ª confirmação) apagar a variável **do usuário** (`HKCU\Environment` + aviso `WM_SETTINGCHANGE`);
+  variável do sistema (HKLM) nunca é tocada — o app explica como remover manualmente.
+- **Aba IA refeita**: um único seletor **Desligada | Gemini | Ollama** (substitui o interruptor + provedor; configurações antigas
+  são migradas). Só a IA escolhida entra na cadeia — com Ollama selecionado o Gemini nunca é chamado. Cartões separados, cada um
+  com seu **Testar** (testa sem precisar selecionar e sem mexer no outro):
+  - **Gemini**: aviso no topo para acompanhar o consumo de tokens no site oficial (link para o Google AI Studio), lista de
+    modelos (`gemini-3.5-flash-lite` recomendado/padrão, `gemini-3.8-flash`, `gemini-flash-latest`, **Outro…** para digitar)
+    — uma escolha explícita nunca é trocada sozinha. Erros amigáveis e traduzidos: 404 → *modelo não disponível para a sua chave,
+    escolha gemini-3.5-flash-lite*; 400/401/403 → *chave inválida ou sem permissão*; 429 → limite de uso.
+  - **Ollama**: endereço, status do servidor (rodando / não encontrado), modelos instalados (`/api/tags`) + **Outro…**.
+  - Novos endpoints (todos com o token): `POST /api/ai/test {provider, model?, url?}`, `POST /api/ai/ollama/status`,
+    `POST /api/secrets/remove`, `GET /api/secrets/env`, `POST /api/secrets/env/remove`.
+- **Intro**: as luzes giram sem parar até a música acabar (antes a animação de piscar anulava a posição das luzes e elas sumiam
+  atrás da logo) e a logo cresce devagar durante toda a intro (1,0 → 1,07, com brilho pulsando). Pular (clique/Esc/Enter),
+  "Tocar a intro completa", fim pelo áudio/temporizador e "reduzir animações" (sem rotação, escala mínima) continuam.
+- README: bloco **Iniciantes** (passo a passo para Windows e Linux), **Perguntas frequentes** e **Segurança e privacidade** (o que
+  fica no PC, o que é enviado e para onde, criptografia por sistema e como remover a chave).
+- Linux a partir do código: `backend/requirements.txt` usa o `rapidocr` v3 no Python 3.13+ e `cryptography` (fora do Windows);
+  novo `npm run dist:linux` (AppImage).
+- `check:links` também confere os links do README/docs. Testes novos: `backend/tests/test_secrets.py` (DPAPI simulado,
+  AES-GCM, migração, nada em texto puro no disco, remoção, variável de ambiente simulada, seleção da IA, teste por provedor e
+  mapeamento de erros) e E2E `scripts/e2e/ai.cjs` e `scripts/e2e/introframes.cjs`.
 
 ## 4.0.5 — 2026-10-19
 

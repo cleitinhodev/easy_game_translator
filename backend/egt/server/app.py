@@ -11,6 +11,7 @@ import os
 import platform
 import secrets
 import tempfile
+import sys
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -121,6 +122,26 @@ class CompDemoBody(BaseModel):
     offline: Optional[bool] = None
     python: Optional[bool] = None
     ollama: Optional[bool] = None
+
+
+class AiTestBody(BaseModel):
+    provider: str = Field(default="", pattern="^(|gemini|ollama)$")
+    model: str = Field(default="", max_length=120)          # opcional: testar um modelo sem salvar
+    url: str = Field(default="", max_length=300)            # opcional (Ollama)
+
+
+class OllamaStatusBody(BaseModel):
+    url: str = Field(default="", max_length=300)
+
+
+class SecretRemoveBody(BaseModel):
+    path: str = Field(max_length=64)
+    confirmed: bool = False
+
+
+class EnvRemoveBody(BaseModel):
+    name: str = Field(max_length=64)
+    confirmed: bool = False
 
 
 class GlossaryBody(BaseModel):
@@ -484,21 +505,87 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
 
     # ---------------------------------------------------------------- IA
     @api.post("/ai/test")
-    def ai_test():
-        from ..translate.manager import build_engines
-        engines = build_engines(ctrl.settings, ai_enabled=True)
-        eng = engines[0] if engines else None
-        if eng is None or eng.id not in ("gemini", "ollama"):
-            return {"ok": False, "message": "IA não configurada"}
+    def ai_test(body: Optional[AiTestBody] = None):
+        """Testa UMA IA (a escolhida em `provider`, mesmo que não seja a selecionada). Não salva nada."""
+        from ..translate.ai import AiError, GeminiTranslate, OllamaTranslate
+        from ..translate.base import RateLimited
+        body = body or AiTestBody()
+        prov = body.provider or ctrl.settings.get("ai.mode", "off")
+        ai = ctrl.settings.section("ai")
+        ctx = lambda: ctrl.settings.get("ai.context", "")  # noqa: E731
+        if prov == "gemini":
+            if ctrl.settings.secret_state("ai.gemini_key") == "unreadable" and not ctrl.settings.gemini_key():
+                return {"ok": False, "code": "key_unreadable", "provider": prov,
+                        "message": "A chave salva não pode ser lida neste computador. Cole a chave novamente."}
+            eng = GeminiTranslate(ctrl.settings.gemini_key, (body.model or ai.get("gemini_model") or "").strip(), ctx)
+        elif prov == "ollama":
+            eng = OllamaTranslate((body.url or ai.get("ollama_url") or "").strip(), (body.model or ai.get("ollama_model") or "").strip(), ctx)
+        else:
+            return {"ok": False, "code": "off", "provider": "off", "message": "IA desligada"}
         ok, why = eng.available()
         if not ok:
-            return {"ok": False, "message": why}
+            return {"ok": False, "code": "no_key" if prov == "gemini" else "config", "provider": prov, "message": why}
         t0 = time.perf_counter()
         try:
             out = eng.translate("Hello, adventurer! The gate is closed.", "en", ctrl.profile.target)
-            return {"ok": True, "message": out, "ms": round((time.perf_counter() - t0) * 1000), "engine": eng.id}
-        except Exception as exc:
-            return {"ok": False, "message": str(exc)}
+            return {"ok": True, "message": out, "ms": round((time.perf_counter() - t0) * 1000), "engine": eng.id, "provider": prov}
+        except (AiError, RateLimited) as exc:
+            code = getattr(exc, "code", "rate_limit" if isinstance(exc, RateLimited) else "http")
+            return {"ok": False, "code": code, "provider": prov, "message": str(exc), "model": eng.model}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "code": "http", "provider": prov, "message": type(exc).__name__}
+
+    @api.post("/ai/ollama/status")
+    def ollama_status(body: Optional[OllamaStatusBody] = None):
+        """Servidor Ollama rodando? + modelos instalados (GET /api/tags). Só http(s); sem seguir redirecionamentos."""
+        import urllib.parse
+        import requests
+        url = ((body.url if body else "") or ctrl.settings.get("ai.ollama_url", "") or "http://localhost:11434").strip().rstrip("/")
+        u = urllib.parse.urlsplit(url)
+        if u.scheme not in ("http", "https") or not u.hostname:
+            return {"server": False, "models": [], "error": "url"}
+        try:
+            r = requests.get(url + "/api/tags", timeout=2.5, allow_redirects=False)
+            if r.status_code != 200:
+                return {"server": False, "models": [], "error": f"HTTP {r.status_code}"}
+            models = sorted({str(m.get("name") or m.get("model") or "") for m in (r.json().get("models") or []) if isinstance(m, dict)} - {""})
+            return {"server": True, "models": models[:200]}
+        except (requests.RequestException, ValueError, AttributeError):
+            return {"server": False, "models": [], "error": "down"}
+
+    # ---------------------------------------------------------------- chaves (segredos)
+    @api.post("/secrets/remove")
+    def secret_remove(body: SecretRemoveBody):
+        from ..config import SECRET_PATHS
+        from ..secret_wipe import remove_secret
+        if body.path not in SECRET_PATHS:
+            raise HTTPException(404, "chave desconhecida")
+        if not body.confirmed:
+            raise HTTPException(409, {"code": "confirm_required"})
+        report = remove_secret(ctrl.settings, body.path)
+        ctrl.settings_changed(paths=[body.path])
+        broadcast_settings()
+        hub.publish({"type": "engines", "data": ctrl.translation_engines()})
+        from ..secret_wipe import env_status
+        report["env"] = env_status() if body.path == "ai.gemini_key" else []
+        return report
+
+    @api.get("/secrets/env")
+    def secret_env():
+        from ..secret_wipe import env_status
+        return {"vars": env_status(), "platform": sys.platform}
+
+    @api.post("/secrets/env/remove")
+    def secret_env_remove(body: EnvRemoveBody):
+        from ..secret_wipe import ENV_NAMES, remove_user_env
+        if body.name not in ENV_NAMES:
+            raise HTTPException(404, "variável desconhecida")
+        if not body.confirmed:
+            raise HTTPException(409, {"code": "confirm_required"})
+        res = remove_user_env(body.name)
+        ctrl.settings_changed(paths=["ai.gemini_key"])
+        broadcast_settings()
+        return res
 
     # ---------------------------------------------------------------- histórico
     @api.get("/history")
