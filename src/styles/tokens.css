@@ -1,0 +1,50 @@
+@import '@fontsource-variable/inter/index.css';
+
+:root {
+  color-scheme: dark;
+  /* paleta azul-marinho do original (#1c1f44) */
+  --navy-950: #0e1030;
+  --navy-900: #14173a;
+  --navy-850: #181b40;
+  --navy-800: #1c1f44;
+  --navy-700: #252a5c;
+  --navy-600: #2f3573;
+  --navy-500: #3a4080;
+  --text: #eef0ff;
+  --text-dim: #b9bee8;
+  --text-mute: #8b90c0;
+  --accent: #7c6cf2;
+  --accent-hi: #9a8cff;
+  --cyan: #43c7ff;
+  --pink: #ee99f4;
+  --ok: #4cd98a;
+  --warn: #ffcc4d;
+  --err: #ff6b7d;
+  --grad: linear-gradient(120deg, #6a00ff 0%, #4455ff 48%, #44ccff 100%);
+  --grad-soft: linear-gradient(120deg, rgba(106, 0, 255, 0.35), rgba(68, 204, 255, 0.25));
+  --line: rgba(255, 255, 255, 0.085);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-hi: rgba(255, 255, 255, 0.08);
+  --shadow: 0 18px 40px -18px rgba(3, 4, 20, 0.75), 0 2px 8px -2px rgba(3, 4, 20, 0.5);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --ease: cubic-bezier(0.22, 0.9, 0.24, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --font: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', 'Inter Variable', Inter, system-ui, -apple-system,
+    'Yu Gothic UI', 'Microsoft YaHei UI', 'Malgun Gothic', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans Arabic',
+    'Noto Sans Devanagari', 'Noto Sans Bengali', sans-serif;
+  --mono: 'Cascadia Mono', 'Cascadia Code', Consolas, 'JetBrains Mono', ui-monospace, 'DejaVu Sans Mono', monospace;
+  --titlebar-h: 44px;
+  --fs: 18px; /* tamanho da fonte dos painéis (slider) */
+}
+
+/* Reserva de fontes por idioma da interface: o latim continua na fonte padrão, a escrita local usa a fonte de sistema adequada. */
+html[lang='ja'] { --font: 'Segoe UI Variable Text', 'Segoe UI', 'Inter Variable', 'Yu Gothic UI', 'Meiryo UI', 'Noto Sans CJK JP', 'Noto Sans JP', system-ui, sans-serif; }
+html[lang='ko'] { --font: 'Segoe UI Variable Text', 'Segoe UI', 'Inter Variable', 'Malgun Gothic', 'Noto Sans CJK KR', 'Noto Sans KR', system-ui, sans-serif; }
+html[lang='zh-CN'] { --font: 'Segoe UI Variable Text', 'Segoe UI', 'Inter Variable', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', system-ui, sans-serif; }
+html[lang='zh-TW'] { --font: 'Segoe UI Variable Text', 'Segoe UI', 'Inter Variable', 'Microsoft JhengHei UI', 'Microsoft JhengHei', 'Noto Sans CJK TC', 'Noto Sans TC', system-ui, sans-serif; }
+html[lang='ar'] { --font: 'Segoe UI Variable Text', 'Segoe UI', 'Inter Variable', Tahoma, 'Noto Sans Arabic', 'Noto Naskh Arabic', system-ui, sans-serif; }
+html[lang='th'] { --font: 'Segoe UI Variable Text', 'Segoe UI', 'Inter Variable', 'Leelawadee UI', 'Noto Sans Thai', Tahoma, system-ui, sans-serif; }
+html[lang='hi'] { --font: 'Segoe UI Variable Text', 'Segoe UI', 'Inter Variable', 'Nirmala UI', 'Noto Sans Devanagari', Mangal, system-ui, sans-serif; }
+html[lang='vi'] { --font: 'Segoe UI Variable Text', 'Segoe UI', 'Inter Variable', Inter, system-ui, sans-serif; }

@@ -1,0 +1,17 @@
+# Opcionais — o app abre sem nenhum deles. Instale só o que quiser usar.
+
+# --- Motores de OCR extras (Configurações > OCR)
+# rapidocr-onnxruntime  (já está em requirements.txt)
+easyocr                     # muitos idiomas; baixa o PyTorch (~2 GB)
+# paddleocr paddlepaddle    # experimental
+# winocr                    # OCR nativo do Windows 10/11 (experimental)
+
+# --- Tradução offline
+argostranslate
+
+# --- Tradução manual: narração (voz) e reconhecimento de fala (microfone)
+gTTS
+SpeechRecognition
+
+# --- Pré-processamento extra (CLAHE)
+opencv-python-headless

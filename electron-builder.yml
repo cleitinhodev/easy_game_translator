@@ -1,0 +1,48 @@
+appId: com.cleitinhodev.easygametranslator
+productName: Easy Game Translator
+copyright: CleitinhoDEV
+directories:
+  output: release
+  buildResources: build
+files:
+  - electron/**/*.cjs
+  - dist/**/*
+  - shared/**/*
+  - resources/**/*
+  - package.json
+  - THIRD_PARTY_NOTICES.md
+  - LICENSE
+  - "!**/*.map"
+asar: true
+# O backend Python (PyInstaller onedir) vai FORA do asar, em resources/backend/
+extraResources:
+  - from: backend/dist/EGTBackend
+    to: backend
+    filter: ["**/*"]
+electronLanguages: [pt-BR, en-US]
+compression: normal
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: build/icon.ico
+  signAndEditExecutable: true
+  signExecutable: false
+nsis:
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  artifactName: EasyGameTranslator-${version}-setup.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Easy Game Translator
+  deleteAppDataOnUninstall: false
+portable:
+  artifactName: EasyGameTranslator-${version}-portable.${ext}
+linux:
+  icon: build/icon.png

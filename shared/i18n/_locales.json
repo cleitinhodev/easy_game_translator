@@ -1,0 +1,22 @@
+[
+ { "code": "pt-BR", "native": "Português (Brasil)", "rtl": false },
+ { "code": "en", "native": "English", "rtl": false },
+ { "code": "es", "native": "Español", "rtl": false },
+ { "code": "fr", "native": "Français", "rtl": false },
+ { "code": "de", "native": "Deutsch", "rtl": false },
+ { "code": "it", "native": "Italiano", "rtl": false },
+ { "code": "ru", "native": "Русский", "rtl": false },
+ { "code": "uk", "native": "Українська", "rtl": false },
+ { "code": "pl", "native": "Polski", "rtl": false },
+ { "code": "tr", "native": "Türkçe", "rtl": false },
+ { "code": "nl", "native": "Nederlands", "rtl": false },
+ { "code": "id", "native": "Bahasa Indonesia", "rtl": false },
+ { "code": "vi", "native": "Tiếng Việt", "rtl": false },
+ { "code": "th", "native": "ไทย", "rtl": false },
+ { "code": "ar", "native": "العربية", "rtl": true },
+ { "code": "hi", "native": "हिन्दी", "rtl": false },
+ { "code": "ja", "native": "日本語", "rtl": false },
+ { "code": "ko", "native": "한국어", "rtl": false },
+ { "code": "zh-CN", "native": "简体中文", "rtl": false },
+ { "code": "zh-TW", "native": "繁體中文", "rtl": false }
+]

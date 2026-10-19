@@ -1,0 +1,9 @@
+# Versões fixadas usadas no executável do Windows (Python 3.12) — testadas juntas.
+-r requirements.txt
+numpy==1.26.4
+onnxruntime==1.20.1
+opencv-python-headless==4.10.0.84
+rapidocr-onnxruntime==1.4.4
+gTTS
+SpeechRecognition
+pyinstaller>=6.0

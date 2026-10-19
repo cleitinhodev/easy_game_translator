@@ -1,0 +1,44 @@
+# dependências e saídas de build
+node_modules/
+dist/
+release/
+.venv/
+backend/build/
+backend/dist/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.egt_test/
+*.log
+
+# executáveis / pacotes (vão para o GitHub Releases, não para o git)
+*.exe
+*.blockmap
+*.zip
+*.zip.[0-9][0-9][0-9]
+*.7z
+
+# rascunhos de tradução automática (só os scripts e overrides vão para o repositório)
+scripts/i18n-draft/*.draft.json
+scripts/i18n-draft/*.failed.json
+scripts/i18n-draft/log_*.txt
+
+# screenshots de testes locais (as do README ficam em docs/screenshots/)
+/screenshots/
+/shots*/
+
+# configuração do usuário / segredos
+.env
+.env.*
+*.pem
+*.key
+config.json
+settings.json
+EasyGameTranslator/
+
+# editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
