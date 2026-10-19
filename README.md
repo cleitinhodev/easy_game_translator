@@ -42,6 +42,8 @@ Baixe a versão mais recente em **[Releases](../../releases/latest)**:
 
 - `EasyGameTranslator-<versão>-setup.exe` — instalador (Windows 10/11 x64; permite escolher a pasta);
 - `EasyGameTranslator-<versão>-portable.exe` — versão portátil, sem instalar.
+- `EasyGameTranslator-<versão>-x86_64.AppImage` — Linux (x86_64), sem instalar — veja [Linux](#linux);
+- `EasyGameTranslator-<versão>-amd64.deb` — Linux Debian/Ubuntu (instalador).
 
 Confira o SHA-256 com `SHA256SUMS.txt` (PowerShell: `Get-FileHash .\arquivo.exe`).
 
@@ -96,8 +98,24 @@ Nada disso é obrigatório.
 
 ### Linux
 
-**Não há versão pronta para Linux nos Releases** por enquanto: no Linux você roda **a partir do código** (e, se quiser,
-gera um **AppImage** no seu próprio computador). Precisa de **Python**.
+**Jeito fácil — AppImage pronto (a partir da 4.0.6):** baixe `EasyGameTranslator-<versão>-x86_64.AppImage` em
+[Releases](../../releases/latest). **Não precisa instalar Python** — o motor e o RapidOCR já vêm dentro.
+
+```bash
+chmod +x EasyGameTranslator-*-x86_64.AppImage
+./EasyGameTranslator-*-x86_64.AppImage
+```
+
+- Se aparecer "AppImages require FUSE to run": Ubuntu 22.04 → `sudo apt install libfuse2`; Ubuntu 24.04+ / Debian 13 →
+  `sudo apt install libfuse2t64` — ou rode com `./EasyGameTranslator-*.AppImage --appimage-extract-and-run`.
+- Se fechar na hora com erro de *sandbox* (comum no Ubuntu 24.04+), prefira o `.deb` (abaixo), que instala o perfil do AppArmor.
+  Último recurso: `--no-sandbox` (desliga uma proteção do Chromium; use só se precisar).
+- **Debian/Ubuntu (instalador):** `sudo apt install ./EasyGameTranslator-<versão>-amd64.deb` → abra pelo menu ("Easy Game Translator").
+- Tesseract é **opcional**: `sudo apt install tesseract-ocr tesseract-ocr-por` (Fedora: `tesseract`, Arch: `tesseract`).
+- Precisa de uma distro de 64 bits razoavelmente recente (glibc 2.28+: Ubuntu 20.04+, Debian 10+, Fedora 29+) e de uma sessão **X11** (veja abaixo).
+- Confira o SHA-256 com `sha256sum -c SHA256SUMS.txt --ignore-missing`.
+
+**A partir do código** (para quem quer mexer no programa): precisa de **Python**.
 
 > **Importante — X11 × Wayland**: a captura de tela usa o X11. Funciona numa **sessão X11/Xorg** (ex.: na tela de login do Ubuntu,
 > escolha "Ubuntu on Xorg"). Em sessões **Wayland** o sistema normalmente **bloqueia** a captura da tela de outros programas,
@@ -164,6 +182,8 @@ chmod +x release/EasyGameTranslator-*.AppImage
 ./release/EasyGameTranslator-*.AppImage
 ```
 
+> O AppImage/.deb oficial da 4.0.6 foi gerado na branch `linux-build` (detalhes no README de lá).
+
 Se o AppImage não abrir ("AppImages require FUSE to run"): instale o FUSE 2 — Ubuntu 22.04: `sudo apt install libfuse2`;
 Ubuntu 24.04+ / Debian 13: `sudo apt install libfuse2t64 fuse3` — ou rode com `--appimage-extract-and-run`. Se reclamar do *sandbox* (comum no Ubuntu 24.04+), acrescente `--no-sandbox`.
 Logs no Linux: `~/.config/EasyGameTranslator/logs/egt.log`.
@@ -176,7 +196,7 @@ Logs no Linux: `~/.config/EasyGameTranslator/logs/egt.log`.
 ### Perguntas frequentes
 
 **Preciso instalar Python?**
-No **Windows, não** — já vem tudo dentro do instalador/portátil. No **Linux, sim** (o programa roda a partir do código).
+No **Windows, não** — já vem tudo dentro do instalador/portátil. No **Linux**, com o AppImage ou o `.deb` dos Releases, **também não**; só precisa se rodar a partir do código.
 
 **Funciona sem internet?**
 O OCR (RapidOCR) e o **cache** funcionam offline: frases já traduzidas aparecem sem internet. Frases novas precisam de internet,
@@ -386,7 +406,8 @@ an optional component manager, **20 UI languages** (including Arabic RTL) and 14
     then *Select region* → *Alphabet* (game language) + *Translate to* → keep *RapidOCR* → *Start*. Run the game in
     windowed/borderless mode (exclusive fullscreen hides overlays). If it won't start, install the official
     [Visual C++ Redistributable x64](https://aka.ms/vs/17/release/vc_redist.x64.exe). Logs: *Options › Report bugs*.
-  - *Linux*: no prebuilt release yet — run from source: install git, Node.js 20+, Python 3.10+ (venv, pip), then
+  - *Linux*: download `EasyGameTranslator-<version>-x86_64.AppImage` (then `chmod +x` and run it; needs FUSE 2 or
+    `--appimage-extract-and-run`) or the `.deb` (`sudo apt install ./EasyGameTranslator-<version>-amd64.deb`). Or run from source: install git, Node.js 20+, Python 3.10+ (venv, pip), then
     `npm ci && npm run setup:python && npm run dev`; optional AppImage with `npm run dist:linux`. Screen capture needs an
     **X11** session (Wayland usually blocks it). Tested only on Debian 13 / Python 3.13 / X11.
 - **Privacy**: screenshots and OCR stay on your PC; online translators receive only the recognized text (never images).
