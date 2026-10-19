@@ -46,3 +46,7 @@ portable:
   artifactName: EasyGameTranslator-${version}-portable.${ext}
 linux:
   icon: build/icon.png
+  target: [AppImage]
+  category: Utility
+  synopsis: Tradutor de jogos em tempo real com OCR
+  artifactName: EasyGameTranslator-${version}-${arch}.${ext}

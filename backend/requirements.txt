@@ -9,4 +9,8 @@ pytesseract>=0.3.10
 deep-translator>=1.11.4
 langdetect>=1.0.9
 requests>=2.31
-rapidocr-onnxruntime>=1.3   # OCR embutido (offline); funciona sem instalar o Tesseract
+# OCR embutido (offline); funciona sem instalar o Tesseract.
+# rapidocr-onnxruntime só tem pacotes até o Python 3.12; no 3.13+ usa o "rapidocr" (v3, baixa os modelos no 1º uso).
+rapidocr-onnxruntime>=1.3; python_version < "3.13"
+rapidocr>=3.0; python_version >= "3.13"
+onnxruntime>=1.17; python_version >= "3.13"

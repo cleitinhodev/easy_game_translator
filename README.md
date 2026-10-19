@@ -8,6 +8,10 @@ Funciona **offline** depois de instalado (OCR local, cache de traduções e moto
 
 ![Janela principal traduzindo](docs/screenshots/translating.png)
 
+**Índice:** [Iniciantes (passo a passo)](#iniciantes) · [Recursos](#recursos) · [Download](#download-e-instalação) ·
+[Como usar](#como-usar) · [Perguntas frequentes](#perguntas-frequentes) · [Compilar](#compilar-a-partir-do-código) ·
+[Licença](#licença) · [English](#english-summary)
+
 > 🇺🇸 [English summary below](#english-summary)
 
 ## Recursos
@@ -43,6 +47,148 @@ Confira o SHA-256 com `SHA256SUMS.txt` (PowerShell: `Get-FileHash .\arquivo.exe`
 > **Aviso do SmartScreen**: o executável **não é assinado** digitalmente, então o Windows pode mostrar
 > "O Windows protegeu o computador". Clique em **Mais informações → Executar assim mesmo**.
 
+## Iniciantes
+
+Guia passo a passo, em linguagem simples. Escolha o seu sistema: **[Windows](#windows)** (o mais fácil) ou **[Linux](#linux)**.
+
+### Windows
+
+Funciona no **Windows 10 ou 11 (64 bits)**. **Não precisa instalar Python** nem mais nada para começar.
+
+1. **Baixe** em [Releases](../../releases/latest) um destes arquivos:
+   - `EasyGameTranslator-<versão>-setup.exe` → instala no computador (cria atalho na Área de Trabalho e no Menu Iniciar);
+   - `EasyGameTranslator-<versão>-portable.exe` → não instala nada, é só abrir (bom para pendrive).
+2. **Abra o arquivo baixado.** Se aparecer a tela azul **"O Windows protegeu o computador"** (SmartScreen), clique em
+   **Mais informações** e depois em **Executar assim mesmo**. Isso acontece porque o programa não tem assinatura digital paga —
+   não quer dizer que tem vírus.
+3. **Instale** (no setup): avance as telas; se quiser, escolha outra pasta. No final, marque "Executar" ou abra pelo atalho.
+4. **Primeira vez**: aparece uma intro com a Nina e música (clique ou aperte `Esc` para pular). Depois abre a **tela principal**.
+5. **Selecione a região**: clique em **Selecionar região** e arraste um retângulo sobre o lugar do jogo onde aparece o texto
+   (legenda, caixa de diálogo, chat). Dá para trocar depois.
+6. **Escolha os idiomas**:
+   - **Alfabeto** = o idioma/escrita **do jogo** (ex.: `abc(EN)` para jogos em inglês, japonês, coreano…);
+   - **Traduzir para** = o idioma em que **você** quer ler (ex.: Português).
+7. **OCR** (o "leitor" do texto da tela): deixe **RapidOCR**, que já vem junto e funciona sem instalar nada.
+8. Clique em **Iniciar** (ou `Ctrl+Alt+S`). A tradução aparece na hora, no painel **Tradução**.
+9. **Box Mode** (opcional): clique no botão do Box Mode (ou `Ctrl+Alt+B`) para abrir uma janelinha só com a tradução, que fica
+   **por cima do jogo**. Arraste e redimensione como quiser.
+10. **Modo de tela do jogo**: use **Janela** ou **Janela sem borda** (*borderless*) nas opções de vídeo do jogo.
+    Em **tela cheia exclusiva** o Windows não deixa nenhuma janela aparecer por cima.
+
+**Internet**: a tradução online precisa de internet. O que já foi traduzido fica guardado (**cache**) e funciona offline depois.
+O OCR (RapidOCR) roda no seu computador, sem internet.
+
+**Extras opcionais** (só se quiser): em **Opções (⚙) › Atualizações** o programa mostra o que pode ser instalado
+(por exemplo o **Tesseract**, outro leitor de texto) com tamanho e botão **Instalar**. Em **Opções › IA** dá para usar
+o **Gemini** (cole sua chave, criada em <https://aistudio.google.com/apikey>) ou o **Ollama** local (<https://ollama.com/download>).
+Nada disso é obrigatório.
+
+**Se algo der errado no Windows**
+
+- **O programa não abre ou o OCR falha**: instale o **Microsoft Visual C++ Redistributable 2015–2022 (x64)** pelo link oficial da
+  Microsoft: <https://aka.ms/vs/17/release/vc_redist.x64.exe> (página oficial: <https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist>).
+  Reinicie o computador e abra de novo.
+- **O antivírus bloqueou / apagou o arquivo**: é comum com programas novos sem assinatura digital ("falso positivo").
+  Baixe só daqui do [Releases](../../releases/latest), confira o SHA-256 (veja `SHA256SUMS.txt`) e, se confiar, adicione uma exceção no antivírus.
+- **Onde ficam os logs** (para reportar erros): **Opções › Reportar Erros** mostra o caminho e tem o botão **Abrir pasta de logs**.
+  O arquivo é `%APPDATA%\EasyGameTranslator\logs\egt.log`.
+
+### Linux
+
+**Não há versão pronta para Linux nos Releases** por enquanto: no Linux você roda **a partir do código** (e, se quiser,
+gera um **AppImage** no seu próprio computador). Precisa de **Python**.
+
+> **Importante — X11 × Wayland**: a captura de tela usa o X11. Funciona numa **sessão X11/Xorg** (ex.: na tela de login do Ubuntu,
+> escolha "Ubuntu on Xorg"). Em sessões **Wayland** o sistema normalmente **bloqueia** a captura da tela de outros programas,
+> e o OCR pode ler uma imagem preta ou vazia. Atalhos globais, click-through e "esconder de prints" do Box Mode foram feitos para o Windows.
+
+**1. Instale os pré-requisitos** (git, Node.js 20 ou mais novo, Python 3.10+ com venv e pip; Tesseract é opcional):
+
+Ubuntu / Debian:
+
+```bash
+sudo apt update
+sudo apt install -y git curl python3 python3-venv python3-pip
+# opcional: Tesseract + idiomas (ex.: inglês, português, japonês)
+sudo apt install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-por tesseract-ocr-jpn
+```
+
+Fedora:
+
+```bash
+sudo dnf install -y git python3 python3-pip nodejs npm
+sudo dnf install -y tesseract tesseract-langpack-eng tesseract-langpack-por   # opcional
+```
+
+Arch Linux:
+
+```bash
+sudo pacman -S --needed git python python-pip nodejs npm
+sudo pacman -S --needed tesseract tesseract-data-eng tesseract-data-por       # opcional
+```
+
+**Node.js**: precisa ser a versão **20 ou mais nova** (`node --version`). Se a do seu sistema for mais antiga (comum no Ubuntu/Debian),
+instale pelo **nvm** (<https://github.com/nvm-sh/nvm#installing-and-updating>) e rode `nvm install 22`, ou pelos pacotes
+oficiais da NodeSource (<https://github.com/nodesource/distributions>). Página oficial: <https://nodejs.org/en/download>.
+
+**2. Baixe o código.** O repositório é **privado**: você precisa ter acesso a ele (ou receber o `.zip` do código-fonte).
+
+```bash
+git clone https://github.com/cleitinhodev/easy_game_translator.git
+cd easy_game_translator
+```
+
+(Com a GitHub CLI: `gh repo clone cleitinhodev/easy_game_translator`. Com o `.zip`: descompacte e entre na pasta.)
+
+**3. Instale as dependências e rode:**
+
+```bash
+npm ci                    # bibliotecas do aplicativo (Electron etc.)
+npm run setup:python      # cria a pasta .venv e instala o motor Python (inclui o RapidOCR)
+npm run dev               # abre o programa
+```
+
+No Python **3.13 ou mais novo**, o RapidOCR usado é o pacote `rapidocr` (v3), que **baixa os modelos (~15 MB) na primeira leitura** —
+deixe a internet ligada na primeira vez. Depois use igual ao Windows: **Selecionar região → Alfabeto / Traduzir para → Iniciar**.
+Se o Tesseract estiver instalado no sistema, ele pode aparecer já selecionado em **OCR** — os dois funcionam; troque para RapidOCR se preferir.
+
+**4. (Opcional) Gerar um AppImage** para abrir sem o terminal:
+
+```bash
+npm run setup:python -- --dev    # instala também o PyInstaller
+# Debian/Ubuntu: o PyInstaller precisa da biblioteca do Python →  sudo apt install -y libpython3-dev
+npm run build:backend            # empacota o motor Python para Linux (backend/dist/EGTBackend/)
+npm run dist:linux               # gera release/EasyGameTranslator-<versão>-x86_64.AppImage
+chmod +x release/EasyGameTranslator-*.AppImage
+./release/EasyGameTranslator-*.AppImage
+```
+
+Se o AppImage não abrir ("AppImages require FUSE to run"): instale o FUSE 2 — Ubuntu 22.04: `sudo apt install libfuse2`;
+Ubuntu 24.04+ / Debian 13: `sudo apt install libfuse2t64 fuse3` — ou rode com `--appimage-extract-and-run`. Se reclamar do *sandbox* (comum no Ubuntu 24.04+), acrescente `--no-sandbox`.
+Logs no Linux: `~/.config/EasyGameTranslator/logs/egt.log`.
+
+> **O que foi testado de verdade**: só **Debian 13 (trixie), Python 3.13, Node 20, X11 (xvfb)** — `git clone` → `npm ci` →
+> `npm run setup:python` → `npm run dev`; captura real de uma região da tela com RapidOCR **e** com o Tesseract + tradução online;
+> e o AppImage (`npm run setup:python -- --dev` → `npm run build:backend` → `npm run dist:linux`) abrindo e lendo a tela. Os comandos de Ubuntu, Fedora e Arch seguem a documentação oficial
+> dessas distribuições, mas **não foram testados** aqui.
+
+### Perguntas frequentes
+
+**Preciso instalar Python?**
+No **Windows, não** — já vem tudo dentro do instalador/portátil. No **Linux, sim** (o programa roda a partir do código).
+
+**Funciona sem internet?**
+O OCR (RapidOCR) e o **cache** funcionam offline: frases já traduzidas aparecem sem internet. Frases novas precisam de internet,
+a não ser que você instale um tradutor offline (Argos, em Opções › Tradução / Atualizações) e ligue o modo **somente cache/offline**.
+
+**O jogo em tela cheia não mostra a tradução.**
+Em **tela cheia exclusiva** nenhuma janela aparece por cima. Mude o jogo para **Janela sem borda** (*borderless*) ou **Janela**.
+Outra opção: deixe a tradução na janela principal, em outro monitor.
+
+**O Windows avisou que é perigoso.**
+É o SmartScreen avisando que o programa **não tem assinatura digital** (certificado pago). Baixe só dos [Releases](../../releases/latest),
+confira o SHA-256 e clique em **Mais informações → Executar assim mesmo**.
+
 ## Como usar
 
 1. Abra o jogo (de preferência em **janela sem borda** — tela cheia exclusiva não permite janelas por cima).
@@ -72,6 +218,7 @@ npm run dev                   # Vite (HMR) + Electron + backend Python
 | `npm run check:links` | confere links externos / CSP |
 | `npm run build:backend` | empacota o backend com PyInstaller (onedir) em `backend/dist/EGTBackend/` |
 | `npm run dist:win` | gera instalador NSIS + portátil em `release/` (precisa do backend empacotado) |
+| `npm run dist:linux` | gera um AppImage para Linux em `release/` (precisa do backend empacotado **no Linux** — veja [Linux](#linux)) |
 | `npm run e2e:shots` | Electron sob `xvfb` em modo demonstração (ex.: `bash scripts/e2e/run.sh dropdowns.cjs`) |
 
 Variáveis úteis: `EGT_PYTHON` (outro Python), `EGT_CONFIG_DIR` (pasta de configuração), `EGT_DEMO=1` (captura e tradutor sintéticos — só para testes de UI).
@@ -187,6 +334,14 @@ an optional component manager, **20 UI languages** (including Arabic RTL) and 14
 - **Download**: see [Releases](../../releases/latest) (`-setup.exe` installer or `-portable.exe`, Windows 10/11 x64).
   The executables are **not code-signed**, so SmartScreen may warn: click *More info → Run anyway*.
 - **Use**: *Select region* → choose alphabet/OCR/target language → *Start* (`Ctrl+Alt+S`). `Ctrl+Alt+B` toggles Box Mode.
+- **Beginners** (full step-by-step in Portuguese: [Iniciantes](#iniciantes)):
+  - *Windows*: no Python needed. Download the setup or portable `.exe`, on SmartScreen click *More info → Run anyway*,
+    then *Select region* → *Alphabet* (game language) + *Translate to* → keep *RapidOCR* → *Start*. Run the game in
+    windowed/borderless mode (exclusive fullscreen hides overlays). If it won't start, install the official
+    [Visual C++ Redistributable x64](https://aka.ms/vs/17/release/vc_redist.x64.exe). Logs: *Options › Report bugs*.
+  - *Linux*: no prebuilt release yet — run from source: install git, Node.js 20+, Python 3.10+ (venv, pip), then
+    `npm ci && npm run setup:python && npm run dev`; optional AppImage with `npm run dist:linux`. Screen capture needs an
+    **X11** session (Wayland usually blocks it). Tested only on Debian 13 / Python 3.13 / X11.
 - **Build**: `npm install && npm run setup:python && npm run dev`; release build: `npm run build:backend && npm run dist:win`.
 - **Translate the UI**: edit `shared/i18n/<code>.json` (keep `{placeholders}` and product names), run `npm run check:i18n`.
   Non-Portuguese/English locales were machine-assisted and may contain mistakes — fixes are welcome.

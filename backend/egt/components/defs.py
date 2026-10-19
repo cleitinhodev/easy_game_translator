@@ -257,7 +257,20 @@ def _pip_message(text: str) -> tuple[str, str]:
 
 
 class RapidOcrComp(PipComponent):
-    id, category, pkg, module = "rapidocr", "ocr", "rapidocr-onnxruntime", "rapidocr_onnxruntime"
+    id, category = "rapidocr", "ocr"
+    # rapidocr-onnxruntime só existe até o Python 3.12; no 3.13+ (ex.: Linux a partir do código) usa o "rapidocr" v3 + onnxruntime
+    if sys.version_info < (3, 13):
+        pkg, module = "rapidocr-onnxruntime", "rapidocr_onnxruntime"
+    else:
+        pkg, module, extra_pkgs = "rapidocr", "rapidocr", ("onnxruntime",)
+
+    def detect(self, ctx):
+        # aceita qualquer um dos dois pacotes já instalados (o código de OCR usa o que encontrar)
+        for pkg, module in (("rapidocr-onnxruntime", "rapidocr_onnxruntime"), ("rapidocr", "rapidocr")):
+            if _module_present(module):
+                self.pkg, self.module = pkg, module
+                break
+        return super().detect(ctx)
     frozen_ok = False                          # no Windows ele já vem dentro do programa
 
     def needed(self, ctx, det):

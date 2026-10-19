@@ -5,8 +5,11 @@ import os
 from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules
 
 datas, binaries, hiddenimports = [], [], []
-for pkg in ("rapidocr_onnxruntime", "onnxruntime"):
-    d, b, h = collect_all(pkg)
+for pkg in ("rapidocr_onnxruntime", "rapidocr", "onnxruntime"):   # rapidocr = v3 (Python 3.13+, Linux); usa o que estiver instalado
+    try:
+        d, b, h = collect_all(pkg)
+    except Exception:
+        continue
     datas += d; binaries += b; hiddenimports += h
 for pkg in ("uvicorn", "fastapi", "starlette", "anyio", "websockets", "deep_translator", "gtts", "speech_recognition", "pytesseract"):
     try:

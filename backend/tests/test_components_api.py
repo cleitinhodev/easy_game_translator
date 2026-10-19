@@ -75,7 +75,9 @@ def test_unknown_component_and_bad_item_are_rejected(client):
     assert r.status_code in (409, 422)
 
 
-def test_check_then_install_tessdata_end_to_end_with_progress(client):
+def test_check_then_install_tessdata_end_to_end_with_progress(client, monkeypatch):
+    from egt.components import defs
+    monkeypatch.setattr(defs, "system_tess_langs", lambda ctx: set())   # independe do Tesseract instalado no sistema
     c = client.post("/api/components/tessdata/check", json={}, headers=H).json()
     por = next(i for i in c["items"] if i["id"] == "por")
     assert por["size"] and not por["installed"]

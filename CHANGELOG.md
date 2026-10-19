@@ -2,6 +2,14 @@
 
 Todas as mudanças das versões 4.x. Datas no formato AAAA-MM-DD.
 
+## Não lançado
+
+- README: bloco **Iniciantes** (passo a passo para Windows e Linux) e **Perguntas frequentes**.
+- Linux a partir do código: `backend/requirements.txt` usa o `rapidocr` v3 no Python 3.13+ (o `rapidocr-onnxruntime` só tem
+  pacotes até o 3.12); o gerenciador de componentes reconhece os dois. Novo `npm run dist:linux` (AppImage).
+- `check:links` também confere os links do README/docs (só https e sites oficiais; âncoras e arquivos; `--online` testa cada link).
+- E2E `scripts/e2e/realcapture.cjs`: captura real de uma região da tela do X com RapidOCR (ou `EGT_OCR=tesseract`).
+
 ## 4.0.5 — 2026-10-19
 
 - **Menus suspensos sempre inteiros dentro da janela** (Fonte, Perfil, Alfabeto, OCR, Traduzir para, idioma e fonte nas
