@@ -2,6 +2,17 @@
 
 Todas as mudanças das versões 4.x. Datas no formato AAAA-MM-DD.
 
+## 4.0.7 — 2026-10-27
+
+- **Link do tutorial atualizado**: o botão **Tutorial** da janela de Ajuda agora abre o tutorial novo e completo, em 20 idiomas:
+  <https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/> (antes: página antiga da v1 no bugzinho.com).
+  Os demais links (site, doação `https://www.bugzinho.com/donate`, YouTube, Patreon, GitHub) não mudaram. README e `homepage` do
+  `package.json` também apontam para o tutorial novo; `npm run check:links` e o E2E da janela de Ajuda conferem o endereço.
+- **Linux no `main`**: o ajuste do `EGTBackend.spec` da branch `linux-build` (não empacota as bibliotecas X11/libstdc++/libgcc de
+  quem compila, para rodar em distros com glibc mais antiga) foi incorporado; o release passa a trazer Windows (instalador e
+  portátil) **e** Linux (AppImage e `.deb`) juntos. Não afeta o Windows.
+- Sem outras mudanças de funcionamento. A 4.0.6 continua como versão estável (branch `stable-4.0.6`).
+
 ## 4.0.6 — 2026-10-19
 
 - **Chaves de API criptografadas** (Gemini, Azure/Microsoft, LibreTranslate). Windows: **DPAPI** (`CryptProtectData`, escopo do

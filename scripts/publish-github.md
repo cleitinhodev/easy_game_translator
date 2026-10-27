@@ -1,6 +1,6 @@
 # Publicar uma nova versão no GitHub
 
-Repositório: <https://github.com/cleitinhodev/easy_game_translator> (privado) · branch `main` · tags `vX.Y.Z`.
+Repositório: <https://github.com/cleitinhodev/easy_game_translator> (público) · branch `main` · tags `vX.Y.Z`.
 Pré-requisitos: `gh auth status` (conta `cleitinhodev`, escopo `repo`), Node, `.venv`, backend empacotado.
 
 ```bash

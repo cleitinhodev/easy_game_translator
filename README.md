@@ -386,7 +386,8 @@ Componentes de terceiros (fontes OFL, Electron, bibliotecas Python etc.): [THIRD
 
 ## Links
 
-- Site: <https://www.bugzinho.com/easygametranslator>
+- Site: <https://www.bugzinho.com/>
+- Tutorial: <https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/>
 - Patreon: <https://www.patreon.com/CleitinhoDEV>
 - GitHub: <https://github.com/cleitinhodev>
 - **Doações**: <https://www.bugzinho.com/donate>

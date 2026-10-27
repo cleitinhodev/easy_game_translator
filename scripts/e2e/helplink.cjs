@@ -1,5 +1,5 @@
 'use strict'
-// Janela de Ajuda: o botão "Doar" tem de abrir https://www.bugzinho.com/donate via app:open-external (shell.openExternal). Em E2E a chamada só é registrada.
+// Janela de Ajuda: o botão "Doar" tem de abrir https://www.bugzinho.com/donate e o "Tutorial" o tutorial novo (4.0.7) via app:open-external (shell.openExternal). Em E2E a chamada só é registrada.
 const fs = require('node:fs'); const path = require('node:path')
 const OUT = process.env.EGT_SHOTS || 'screenshots'
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -16,6 +16,9 @@ module.exports = async ({ app, getMain }) => {
     await js(`document.querySelector('.link-btn.don').click()`); await sleep(500)
     ok('donate-opens-new-url', global.__egtExternal.includes('https://www.bugzinho.com/donate'), global.__egtExternal)
     ok('only-one-call', global.__egtExternal.length === 1)
+    // 4.0.7: o botão "Tutorial" abre o tutorial novo
+    global.__egtExternal.length = 0; await js(`document.querySelector('.link-btn.tut').click()`); await sleep(400)
+    ok('tutorial-opens-new-url', global.__egtExternal.length === 1 && global.__egtExternal[0] === 'https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/', [...global.__egtExternal])
     // os outros links continuam funcionando
     for (const id of ['site', 'yt', 'pat']) { global.__egtExternal.length = 0; await js(`document.querySelector('.link-btn.${id}')?.click()`); await sleep(300); ok(`link-${id}-https`, global.__egtExternal.length === 1 && /^https:\/\//.test(global.__egtExternal[0]), global.__egtExternal) }
     // URL não-https é recusada pelo IPC

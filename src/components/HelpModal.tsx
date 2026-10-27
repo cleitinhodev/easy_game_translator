@@ -9,7 +9,7 @@ import { SOFT_RAINBOW } from '@/lib/format'
 // Links do help_window.py do v3 (CleitinhoDEV)
 export const LINKS = {
   website: 'https://www.bugzinho.com/',
-  tutorial: 'https://www.bugzinho.com/easygametranslator',
+  tutorial: 'https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/',
   donate: 'https://www.bugzinho.com/donate',
   channel: 'https://www.youtube.com/@CleitinhoDEV',
   patreon: 'https://www.patreon.com/CleitinhoDEV',
@@ -67,7 +67,7 @@ export function HelpModal() {
   const t = useT()
   const open = useStore((s) => s.modal === 'help')
   const setModal = useStore((s) => s.setModal)
-  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.0.6')
+  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.0.7')
   const links: [string, string, string][] = [
     [t('help.website'), LINKS.website, 'site'], [t('help.tutorial'), LINKS.tutorial, 'tut'], [t('help.donate'), LINKS.donate, 'don'],
     [t('help.channel'), LINKS.channel, 'yt'], [t('help.support'), LINKS.patreon, 'pat'], [t('help.projects'), LINKS.github, 'git'],
