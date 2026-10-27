@@ -182,7 +182,10 @@ chmod +x release/EasyGameTranslator-*.AppImage
 ./release/EasyGameTranslator-*.AppImage
 ```
 
-> O AppImage/.deb oficial da 4.0.6 foi gerado na branch `linux-build` (detalhes no README de lá).
+> Como o AppImage/.deb oficial é gerado: Python **3.12** (`uv venv -p 3.12 .venv`, build "standalone" com glibc antiga) com
+> `requirements-bundle.txt` + `requirements-dev.txt`; `pip uninstall opencv-python` (fica só o `opencv-python-headless`, sem Qt/ffmpeg);
+> `cryptography` em wheel `manylinux_2_28`; o `EGTBackend.spec` não leva as bibliotecas X11/libstdc++ de quem compila
+> (usa as do sistema) para rodar em distros mais antigas. Depois `npm run build:backend` e `npx electron-builder --linux AppImage deb --x64`.
 
 Se o AppImage não abrir ("AppImages require FUSE to run"): instale o FUSE 2 — Ubuntu 22.04: `sudo apt install libfuse2`;
 Ubuntu 24.04+ / Debian 13: `sudo apt install libfuse2t64 fuse3` — ou rode com `--appimage-extract-and-run`. Se reclamar do *sandbox* (comum no Ubuntu 24.04+), acrescente `--no-sandbox`.
