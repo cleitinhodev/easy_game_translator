@@ -352,7 +352,9 @@ class AppController:
         }
 
     def translation_engines(self) -> list[dict]:
-        """Todos os motores comuns com disponibilidade, ordem e estado de espera."""
+        """Todos os motores comuns com metadados (tipo, limites, privacidade, campos), disponibilidade,
+        ordem, estado de espera e o último erro. Nada de rede aqui."""
+        from .translate.providers import BY_ID
         tr = self.settings.section("translation")
         facts = engine_factories(self.settings)
         order = [e for e in tr["order"] if e in facts] + [e for e in facts if e not in tr["order"]]
@@ -366,10 +368,37 @@ class AppController:
             except Exception as exc:
                 ok, why, name, online = False, str(exc), eid, True
             stt = status.get(eid, {})
+            prov = BY_ID.get(eid)
+            meta = prov.public() if prov else {}
+            if prov:
+                name = prov.name
+                meta["key_state"] = {f"translation.{f.key}": self.settings.secret_state(f"translation.{f.key}")
+                                     for f in prov.fields if f.kind in ("secret", "email")}
             out.append({"id": eid, "name": name, "online": bool(online), "available": bool(ok), "detail": why,
                         "enabled": eid in tr["enabled"], "cooldown": round(stt.get("cooldown", 0.0)),
-                        "error": stt.get("error", "")})
+                        "error": stt.get("error", ""), "code": stt.get("code", ""),
+                        "last_ok": stt.get("last_ok", 0.0), "meta": meta})
         return out
+
+    def test_engine(self, eid: str, text: str, src: str, tgt: str) -> dict:
+        """Testa um motor (mesmo desligado) com as configurações salvas. Só esse serviço recebe o texto."""
+        facts = engine_factories(self.settings)
+        if eid not in facts:
+            return {"engine": eid, "ok": False, "code": "config", "message": "motor desconhecido", "text": "", "ms": 0}
+        eng = facts[eid]()
+        if eid == "libre":   # o servidor responde? (GET /languages não gasta cota) — mensagem clara antes de traduzir
+            from .translate.base import TranslationError
+            try:
+                ok, _ = eng.available()
+                if ok:
+                    eng.languages()
+            except TranslationError as exc:
+                self.manager._fail(eid, exc)
+                return {"engine": eid, "ok": False, "code": exc.code, "message": str(exc), "text": "", "ms": 0}
+        res = self.manager.test_engine(eng, text, src, tgt)
+        if eid == "mozhi" and res.get("ok"):
+            res["instance"] = getattr(eng, "last_instance", "")
+        return res
 
     def profile_dict(self) -> dict:
         d = self.profile.to_dict()

@@ -1,11 +1,14 @@
 {
   "name": "easy-game-translator",
   "productName": "Easy Game Translator",
-  "version": "4.0.7",
+  "version": "4.0.8",
   "description": "Easy Game Translator v4 — tradutor de tela para jogos (Electron + Python)",
   "author": "CleitinhoDEV",
   "license": "GPL-3.0-or-later",
-  "repository": { "type": "git", "url": "https://github.com/cleitinhodev/easy_game_translator.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cleitinhodev/easy_game_translator.git"
+  },
   "homepage": "https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/",
   "private": true,
   "main": "electron/main.cjs",

@@ -19,7 +19,15 @@ export interface Profile {
 }
 
 export interface OcrEngine { id: string; name: string; available: boolean; detail: string; pip_hint: string; note: string }
-export interface TrEngine { id: string; name: string; online: boolean; available: boolean; detail: string; enabled: boolean; cooldown: number; error: string }
+export interface TrField { key: string; kind: 'secret' | 'text' | 'url' | 'select' | 'email'; label: string; placeholder: string; options: string[] }
+export interface TrMeta {
+  id: string; name: string; kind: 'free' | 'key' | 'self' | 'offline'; official: boolean; receiver: string; country: string
+  limit: { period: 'month' | 'day' | 'once' | 'fair' | 'credit' | 'local' | 'self'; amount: number }
+  fields: TrField[]; site: string; key_url: string; docs: string; howto: string; note: string; default_on: boolean
+  key_state?: Record<string, 'none' | 'ok' | 'unreadable'>
+}
+export interface TrEngine { id: string; name: string; online: boolean; available: boolean; detail: string; enabled: boolean; cooldown: number; error: string; code?: string; last_ok?: number; meta?: TrMeta }
+export interface TrTest { engine: string; ok: boolean; text: string; code: string; message: string; ms: number; instance?: string }
 export interface Alphabet { key: string; title: string; tesseract: string; cjk: boolean }
 export interface Language { code: string; name: string }
 export interface Monitor { left: number; top: number; width: number; height: number }
@@ -36,7 +44,7 @@ export interface Metrics {
   stats: { requests: number; cache_hits: number; live: number; errors: number; passthrough: number }
   ocr_engine: string
   net: 'online' | 'offline' | 'cache' | 'unknown'
-  engines: Record<string, { fails: number; cooldown: number; error: string }>
+  engines: Record<string, { fails: number; cooldown: number; error: string; code?: string; last_ok?: number }>
   uptime: number
 }
 
@@ -45,7 +53,13 @@ export interface Settings {
   capture: { interval: number }
   filters: { stable_ms: number; max_wait_ms: number; min_chars: number; min_alnum_ratio: number; min_confidence: number; diff_mean: number; similarity: number }
   ocr: { engine: string; tesseract_path: string; tesseract_psm: number; easyocr_gpu: boolean }
-  translation: { order: string[]; enabled: string[]; cache_only: boolean; libre_url: string; libre_key: string; lingva_url: string; microsoft_key: string; microsoft_region: string; timeout: number }
+  translation: {
+    order: string[]; enabled: string[]; cache_only: boolean; timeout: number
+    mymemory_email: string; mozhi_url: string; mozhi_engine: string; apertium_url: string; libre_url: string; libre_key: string
+    deepl_key: string; microsoft_key: string; microsoft_region: string; gcloud_key: string; baidu_appid: string; baidu_key: string
+    youdao_appkey: string; youdao_secret: string; niutrans_key: string
+    [k: string]: string | string[] | boolean | number
+  }
   ai: { mode: 'off' | 'gemini' | 'ollama'; gemini_key: string; gemini_model: string; ollama_url: string; ollama_model: string; context: string; env_key_found: boolean; env_key_names?: string[] }
   secrets?: { state: Record<string, 'none' | 'ok' | 'unreadable'>; scheme: string }
   box: { alpha: number; borderless: boolean; click_through: boolean; auto_font: boolean; font_size: number; text_color: string; bg_color: string; show_original: boolean; exclude_from_capture: boolean }

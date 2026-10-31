@@ -52,14 +52,26 @@ DEFAULTS: dict[str, Any] = {
         "easyocr_gpu": False,
     },
     "translation": {
-        "order": ["google", "mymemory", "libre", "lingva", "microsoft", "argos"],
-        "enabled": ["google", "mymemory"],
+        # ordem da cadeia de reserva e motores ligados (catálogo em translate/providers.py)
+        "order": ["google", "bing", "mymemory", "mozhi", "yandex", "apertium", "libre", "deepl", "microsoft",
+                  "gcloud", "baidu", "youdao", "niutrans", "argos"],
+        "enabled": ["google", "bing", "mymemory"],
         "cache_only": False,
-        "libre_url": "http://localhost:5000",
-        "libre_key": "",
-        "lingva_url": "https://lingva.ml",
-        "microsoft_key": "",
+        "mymemory_email": "",       # CIFRADO (opcional: aumenta a cota grátis)
+        "mozhi_url": "",            # "" = alterna entre as instâncias públicas conhecidas
+        "mozhi_engine": "duckduckgo",
+        "apertium_url": "https://apertium.org/apy",
+        "libre_url": "",            # servidor próprio (ex.: http://localhost:5000) ou https://libretranslate.com com chave
+        "libre_key": "",            # CIFRADO
+        "deepl_key": "",            # CIFRADO
+        "microsoft_key": "",        # CIFRADO (Azure AI Translator)
         "microsoft_region": "",
+        "gcloud_key": "",           # CIFRADO
+        "baidu_appid": "",
+        "baidu_key": "",            # CIFRADO
+        "youdao_appkey": "",
+        "youdao_secret": "",        # CIFRADO
+        "niutrans_key": "",         # CIFRADO
         "timeout": 8.0,
     },
     "ai": {                          # OPCIONAL — desligado por padrão
@@ -114,6 +126,31 @@ def _merge(base: dict, over: dict) -> dict:
     return out
 
 
+REMOVED_ENGINES = {"lingva": "mozhi"}          # 4.0.8: o Lingva parou (instâncias mortas ou devolvendo o texto sem traduzir)
+
+
+def _migrate_translation(tr: dict, raw: dict) -> bool:
+    """Ajustes de versões antigas na seção translation. Devolve True se mudou algo."""
+    changed = False
+    for lst in ("order", "enabled"):
+        v = tr.get(lst)
+        if isinstance(v, list) and any(e in REMOVED_ENGINES for e in v):
+            new = []
+            for e in v:
+                e = REMOVED_ENGINES.get(e, e)
+                if e not in new:
+                    new.append(e)
+            tr[lst] = new
+            changed = True
+    if raw.get("libre_url") == "http://localhost:5000" and "libre_url" in raw and not raw.get("libre_key") \
+            and "libre" not in (tr.get("enabled") or []):
+        tr["libre_url"] = ""                       # antigo padrão (servidor local que quase ninguém tinha)
+        changed = True
+    if "lingva_url" in raw:
+        changed = True                             # a chave some do arquivo no próximo salvamento
+    return changed
+
+
 def _clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
 
@@ -146,6 +183,9 @@ class Settings:
                 if rai and "mode" not in rai:        # 4.0.5 e antes: ai.enabled + ai.provider → ai.mode
                     prov = rai.get("provider") if rai.get("provider") in ("gemini", "ollama") else "gemini"
                     self.data["ai"]["mode"] = prov if rai.get("enabled") else "off"
+                    dirty = True
+                rtr = raw.get("translation") if isinstance(raw.get("translation"), dict) else {}
+                if rtr and _migrate_translation(self.data["translation"], rtr):   # 4.0.8: Lingva → Mozhi etc.
                     dirty = True
             plain_found = False
             for p in SECRET_PATHS:                   # chave em texto puro (versões antigas) → cifra e apaga o texto puro
@@ -249,6 +289,16 @@ class Settings:
             self.data["ui"]["material"] = "auto"
         if self.data["ui"].get("reduce_motion") not in ("system", "on", "off"):
             self.data["ui"]["reduce_motion"] = "system"
+        tr = self.data["translation"]
+        for lst in ("order", "enabled"):
+            v = tr.get(lst)
+            tr[lst] = [e for e in v if isinstance(e, str) and e] if isinstance(v, list) else list(DEFAULTS["translation"][lst])
+        if tr.get("mozhi_engine") not in ("duckduckgo", "yandex", "google"):
+            tr["mozhi_engine"] = "duckduckgo"
+        try:
+            tr["timeout"] = round(_clamp(float(tr.get("timeout", 8.0)), 2.0, 30.0), 1)
+        except (TypeError, ValueError):
+            tr["timeout"] = 8.0
         hk = self.data.get("hotkeys", {})
         for k, v in list(hk.items()):
             if isinstance(v, str):
@@ -318,7 +368,10 @@ def leftover_files(settings_path: Path) -> list[Path]:
 
 
 # ---------------------------------------------------------------- API (v4)
-SECRET_PATHS = ("translation.libre_key", "translation.microsoft_key", "ai.gemini_key")
+# todos os campos sensíveis (chaves e o e-mail do MyMemory) — cifrados em disco, mascarados na interface
+SECRET_PATHS = ("translation.mymemory_email", "translation.libre_key", "translation.deepl_key",
+                "translation.microsoft_key", "translation.gcloud_key", "translation.baidu_key",
+                "translation.youdao_secret", "translation.niutrans_key", "ai.gemini_key")
 MASK = "••••••••"
 _EDITABLE_SECTIONS = ("ui", "capture", "filters", "ocr", "translation", "ai", "box", "hotkeys")
 

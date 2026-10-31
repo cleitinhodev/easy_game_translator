@@ -11,7 +11,7 @@ for pkg in ("rapidocr_onnxruntime", "rapidocr", "onnxruntime"):   # rapidocr = v
     except Exception:
         continue
     datas += d; binaries += b; hiddenimports += h
-for pkg in ("uvicorn", "fastapi", "starlette", "anyio", "websockets", "deep_translator", "gtts", "speech_recognition", "pytesseract"):
+for pkg in ("uvicorn", "fastapi", "starlette", "anyio", "websockets", "gtts", "speech_recognition", "pytesseract"):
     try:
         hiddenimports += collect_submodules(pkg)
     except Exception:
@@ -22,6 +22,7 @@ for pkg in ("langdetect", "speech_recognition", "gtts", "certifi"):
     except Exception:
         pass
 hiddenimports += ["egt.components." + m for m in ("net", "download", "store", "sysinfo", "base", "defs", "service", "demo")]
+hiddenimports += ["egt.translate." + m for m in ("google", "bing", "yandex", "mozhi", "apertium", "mymemory", "libre", "official", "providers", "http", "argos", "ai")]
 hiddenimports += ["egt.server.app", "egt.server.run", "egt.vault", "egt.secret_wipe", "egt.demo", "mss", "PIL.ImageGrab", "cv2", "yaml"]
 
 a = Analysis(

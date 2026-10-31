@@ -96,6 +96,13 @@ class TestTranslationBody(BaseModel):
     tgt: str = "pt"
 
 
+class EngineTestBody(BaseModel):
+    engine: str = Field(pattern=r"^[a-z0-9_]{2,20}$")
+    text: str = Field(default="Hello, adventurer! The gate is closed.", min_length=1, max_length=2000)
+    src: str = Field(default="", max_length=12)
+    tgt: str = Field(default="pt", min_length=2, max_length=12)
+
+
 class ArgosBody(BaseModel):
     src: str
     tgt: str
@@ -414,7 +421,14 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
     def tr_test(body: TestTranslationBody):
         res = ctrl.manager.translate(body.text, body.src, body.tgt)
         return {"ok": res.ok, "text": res.text, "engine": res.engine, "cached": res.cached,
-                "error": res.error, "ms": round(res.elapsed_ms), "attempts": res.attempts}
+                "error": res.error, "ms": round(res.elapsed_ms), "attempts": res.attempts, "codes": res.codes}
+
+    @api.post("/translation/engine_test")
+    def tr_engine_test(body: EngineTestBody):
+        """Testa UM tradutor (online? + tradução manual do texto de exemplo). Não usa nem grava o cache."""
+        res = ctrl.test_engine(body.engine, body.text, body.src.strip(), body.tgt.strip())
+        hub.publish({"type": "engines", "data": ctrl.translation_engines()})
+        return res
 
     @api.get("/cache")
     def cache_info():
@@ -616,7 +630,7 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
     def about():
         mods = {}
         for mod, label in (("fastapi", "fastapi"), ("uvicorn", "uvicorn"), ("PIL", "pillow"), ("numpy", "numpy"),
-                           ("pytesseract", "pytesseract"), ("deep_translator", "deep-translator"),
+                           ("pytesseract", "pytesseract"), 
                            ("mss", "mss"), ("langdetect", "langdetect"), ("requests", "requests"),
                            ("rapidocr_onnxruntime", "rapidocr-onnxruntime"), ("easyocr", "easyocr"),
                            ("argostranslate", "argostranslate"), ("gtts", "gTTS"),

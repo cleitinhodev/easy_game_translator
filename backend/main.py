@@ -4,7 +4,7 @@ Uso (o Electron faz isso sozinho):
     python main.py                    # porta aleatória em 127.0.0.1, token aleatório
     python main.py --selftest [arq]   # lê uma imagem gerada com o RapidOCR e sai
 Variáveis: EGT_TOKEN (token da sessão), EGT_PORT (porta fixa; padrão aleatória), EGT_CONFIG_DIR.
-Ao ficar pronto imprime uma linha:  EGT_READY {"port": 12345, "token": "...", "version": "4.0.7"}
+Ao ficar pronto imprime uma linha:  EGT_READY {"port": 12345, "token": "...", "version": "4.0.8"}
 """
 from __future__ import annotations
 

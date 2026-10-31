@@ -15,7 +15,7 @@ Os componentes abaixo mantêm as próprias licenças, todas compatíveis com a d
 | Componente | Licença |
 |---|---|
 | Python | PSF-2.0 |
-| FastAPI, pydantic, anyio, h11, mss, deep-translator, beautifulsoup4, urllib3, onnxruntime, pyclipper, PyYAML, gTTS, tqdm | MIT |
+| FastAPI, pydantic, anyio, h11, mss, urllib3, onnxruntime, pyclipper, PyYAML, gTTS, tqdm | MIT |
 | uvicorn, starlette, websockets, click, idna, numpy, shapely, SpeechRecognition, protobuf | BSD |
 | Pillow | MIT-CMU (HPND) |
 | requests, pytesseract, rapidocr-onnxruntime, opencv-python-headless, flatbuffers | Apache-2.0 |
@@ -24,6 +24,10 @@ Os componentes abaixo mantêm as próprias licenças, todas compatíveis com a d
 
 Componentes **opcionais** instalados pelo usuário (Tesseract — Apache-2.0; EasyOCR — Apache-2.0; Argos Translate — MIT;
 Ollama — MIT) não são distribuídos com o programa.
+
+Serviços de tradução online (Google, Microsoft/Bing, Yandex, MyMemory, Mozhi, Apertium, LibreTranslate, DeepL, Azure, Google
+Cloud, Baidu, Youdao, NiuTrans) são acessados por HTTP com código próprio do programa — nenhuma biblioteca deles é distribuída.
+O uso de cada serviço segue os termos do próprio serviço (marcas pertencem aos respectivos donos).
 
 ## Fontes embutidas (seletor "Fonte do texto")
 Arquivos woff2 sem modificação (subconjuntos latin, latin-ext, cyrillic, greek, vietnamese quando disponíveis), obtidos dos pacotes

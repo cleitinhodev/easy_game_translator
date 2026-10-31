@@ -17,6 +17,10 @@ class TranslationCache:
         self.max_rows = max_rows
         self._lock = threading.Lock()
         self._puts = 0
+        try:   # 4.0.8: o Lingva foi removido (devolvia o texto sem traduzir) — apaga o que ele gravou
+            self.db.execute("DELETE FROM translations WHERE engine IN ('lingva')")
+        except Exception:  # noqa: BLE001 (tabela ainda não criada em testes isolados)
+            pass
 
     @staticmethod
     def key(text: str) -> str:

@@ -2,6 +2,37 @@
 
 Todas as mudanças das versões 4.x. Datas no formato AAAA-MM-DD.
 
+## 4.0.8 — 2026-10-31
+
+- **Tradutores refeitos** (Opções › Tradução). Investigação: o *deep-translator* era bloqueado/limitado pelos serviços, todas as
+  instâncias públicas do **Lingva** pararam ou devolviam o texto sem traduzir e o LibreTranslate público passou a exigir chave —
+  por isso só o MyMemory entregava texto. Agora são **14 serviços**, cada um com **cartão próprio**:
+  - **Grátis, sem chave**: Google Translate e Bing Translator (endpoints públicos, chamados direto, sem biblioteca), Yandex
+    Translate (os três marcados **não oficial**, com aviso), MyMemory (e-mail opcional sobe o limite de 5.000 para 50.000
+    caracteres/dia), **Mozhi** (novo; substitui o Lingva, escolhe instância sozinho, motor DuckDuckGo/Bing, Yandex ou Google)
+    e **Apertium** (novo; código aberto).
+  - **Servidor próprio**: LibreTranslate (endereço + chave opcional; o libretranslate.com exige chave).
+  - **Com chave grátis** (só colar a chave): **DeepL**, **Azure AI Translator** (chave + região), **Google Cloud Translation**,
+    **Baidu Fanyi** (APP ID + chave), **Youdao** (App Key + segredo) e **NiuTrans** — implementados pela documentação oficial,
+    cada um com "Como conseguir a chave" e link oficial.
+  - **Offline**: Argos Translate (opcional).
+- Cada cartão mostra **quem recebe o texto** (empresa e país), o **limite grátis**, ordem (↑ ↓), liga/desliga, status
+  (online / não testado / não configurado / em espera / erro) e um **Testar** que traduz um texto de exemplo só com aquele
+  serviço (ignora cache e liga/desliga; origem automática ou escolhida). **Testar os ligados** testa todos. Nada é testado
+  sozinho ao abrir a aba.
+- **Chaves e o e-mail do MyMemory criptografados** como a do Gemini (DPAPI no Windows; chaveiro/AES-GCM no Linux), mascarados
+  na interface, fora de logs/exportações e apagáveis com **Remover chave**. Nenhuma chave vai na URL (cabeçalhos/corpo HTTPS);
+  os pedidos não seguem redirecionamentos e as respostas de erro não são registradas (algumas ecoam a chave).
+- **Erros por serviço com motivo claro** (sem chave, chave recusada, cota, muitas requisições, bloqueado, idioma não suportado,
+  devolveu o próprio texto, sem internet…) — no teste de cada cartão e no teste da cadeia. A cadeia continua com o próximo
+  serviço quando um falha; erros de configuração/chave esperam mais antes de tentar de novo. Detecção de "eco" (serviço que
+  devolve o texto sem traduzir).
+- **Migração automática**: quem usava o Lingva passa para o Mozhi; traduções antigas do Lingva no cache são apagadas
+  (podiam ser o texto original sem tradução). Ordem e serviços ligados são preservados.
+- Removidos: **Lingva** (morto) e a dependência **deep-translator** (+ beautifulsoup4).
+- Novo endpoint (com token): `POST /api/translation/engine_test {engine, text, src, tgt}`; `/api/translation/engines` traz os
+  dados de cada serviço (sem chaves). Testes: 44 novos testes do backend com HTTP simulado e E2E da aba Tradutores (31 checagens).
+
 ## 4.0.7 — 2026-10-27
 
 - **Link do tutorial atualizado**: o botão **Tutorial** da janela de Ajuda agora abre o tutorial novo e completo, em 20 idiomas:

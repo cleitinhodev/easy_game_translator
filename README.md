@@ -18,7 +18,8 @@ Funciona **offline** depois de instalado (OCR local, cache de traduções e moto
 
 - **Vários motores de OCR**: RapidOCR (embutido, já funciona sem instalar nada), Tesseract, EasyOCR; Paddle/WinOCR experimentais.
   Pré-processamento (escala, cinza, inversão automática, contraste, limiar, nitidez), detecção de mudança e estabilização do texto.
-- **Tradutores online e offline** em ordem de prioridade, com **cache SQLite** e modo **somente cache/offline** (Argos Translate opcional).
+- **14 tradutores** (grátis sem chave, com chave grátis, servidor próprio e offline) em ordem de prioridade, cada um com cartão
+  próprio, **teste ao vivo** e aviso de privacidade; **cache SQLite** e modo **somente cache/offline** (veja [Tradutores](#tradutores)).
 - **Box Mode**: janela transparente, sempre no topo, arrastável/redimensionável, fonte automática, click-through opcional e
   excluída de prints/gravações (para o OCR não ler a própria tradução).
 - **Canal duplo**: duas regiões ao mesmo tempo (ex.: chat + legenda).
@@ -213,6 +214,46 @@ Outra opção: deixe a tradução na janela principal, em outro monitor.
 É o SmartScreen avisando que o programa **não tem assinatura digital** (certificado pago). Baixe só dos [Releases](../../releases/latest),
 confira o SHA-256 e clique em **Mais informações → Executar assim mesmo**.
 
+## Tradutores
+
+Em **Opções › Tradução** cada serviço tem um cartão com: liga/desliga, ordem de prioridade (↑ ↓), **quem recebe o texto**
+(empresa e país), limite grátis, campos de configuração e um **Testar** que traduz um texto de exemplo só com aquele serviço
+(ignora o cache e o liga/desliga) e mostra se está **online** ou o motivo do erro. **Testar os ligados** testa todos de uma vez.
+Nada é testado sozinho ao abrir a aba. Na tradução normal os serviços ligados são tentados em ordem: se um falhar, o próximo assume
+(e o erro de cada um aparece no teste da cadeia).
+
+| Serviço | Tipo | Chave? | Limite grátis (oficial, out/2026) | Quem recebe o texto |
+|---|---|---|---|---|
+| Google Translate | grátis, **não oficial** ¹ | não | uso razoável | Google (EUA) |
+| Bing Translator | grátis, **não oficial** ¹ | não | uso razoável | Microsoft (EUA) |
+| MyMemory | grátis (API pública) | não (e-mail opcional) | 5.000 caracteres/dia (50.000 com e-mail) | Translated (Itália) |
+| Mozhi | grátis (instâncias de voluntários) | não | uso razoável | a instância Mozhi → o motor escolhido (DuckDuckGo/Bing, Yandex, Google) |
+| Yandex Translate | grátis, **não oficial** ¹ | não | uso razoável | Yandex (Rússia) |
+| Apertium | grátis, código aberto | não | uso razoável (poucos pares de idiomas) | apertium.org ou o servidor que você informar |
+| LibreTranslate | servidor próprio | só no libretranslate.com | o seu servidor | o servidor que você informar |
+| DeepL | oficial | **sim** | 1.000.000 caracteres uma única vez (plano Developer); chaves antigas "API Free": 500.000/mês | DeepL SE (Alemanha) |
+| Azure AI Translator | oficial | **sim** (+ região) | 2.000.000 caracteres/mês (plano F0) | Microsoft Azure |
+| Google Cloud Translation | oficial | **sim** | 500.000 caracteres/mês (exige conta de faturamento) | Google Cloud (EUA) |
+| Baidu Fanyi (百度翻译) | oficial | **sim** (APP ID + chave) | 50.000 caracteres/mês (conta padrão) | Baidu (China) |
+| Youdao (有道智云) | oficial | **sim** (App Key + segredo) | crédito grátis de boas-vindas | NetEase Youdao (China) |
+| NiuTrans (小牛翻译) | oficial | **sim** | 200.000 caracteres/dia | NiuTrans (China) |
+| Argos Translate | **offline** (opcional) | não | sem limite — roda no seu PC | ninguém |
+
+¹ **Não oficial**: usa o mesmo endpoint do site/app do serviço, sem contrato nem garantia — pode parar ou limitar a qualquer
+momento (o cartão avisa). Os limites acima são os publicados pelos serviços e podem mudar; confira no link de cada cartão.
+
+- **Chaves**: cada cartão de serviço com chave tem **Como conseguir a chave** (passo a passo + link oficial). Você só cola a
+  chave e clica em **Salvar**: ela é guardada **criptografada** como a do Gemini (veja abaixo), aparece como `••••••••` e pode
+  ser apagada com **Remover chave**.
+- **Verificado em 2026-10-31**: Google, Bing, Yandex, MyMemory, Mozhi e Apertium traduziram ao vivo. DeepL, Azure, Google
+  Cloud, Baidu, Youdao, NiuTrans e libretranslate.com foram conferidos até a autenticação (respondem "chave inválida" com
+  chave falsa) — a tradução com chave real segue a documentação oficial de cada um, mas não pôde ser testada sem conta.
+- **Removidos na 4.0.8**: **Lingva** (todas as instâncias públicas pararam ou devolvem o texto sem traduzir — quem usava passa
+  para o Mozhi automaticamente) e a biblioteca **deep-translator** (bloqueada pelos serviços e sem manutenção; o Google e o
+  Microsoft/Bing agora são chamados direto). Não incluídos: Tencent (cota grátis encerrada em 2026-10-01), Papago, Yandex
+  Cloud, ModernMT, Systran, Lara, Caiyun (sem plano grátis verificável), Reverso (bloqueio Cloudflare), Amazon Translate
+  (assinatura AWS SigV4 + conta paga após 12 meses).
+
 ## Segurança e privacidade
 
 **O que fica só no seu computador**
@@ -221,13 +262,13 @@ confira o SHA-256 e clique em **Mais informações → Executar assim mesmo**.
   enviada para lugar nenhum nem salva em disco.
 - **Histórico, cache de traduções, perfis, glossário e configurações**: na pasta de configuração do usuário
   (Windows: `%APPDATA%\EasyGameTranslator`; Linux: `~/.config/EasyGameTranslator`). Não há telemetria.
-- **Chaves de API** (Gemini, Azure/Microsoft, LibreTranslate): guardadas **criptografadas** (detalhes abaixo), nunca escritas em
+- **Chaves de API** (Gemini e todas as chaves dos tradutores — DeepL, Azure, Google Cloud, Baidu, Youdao, NiuTrans, LibreTranslate — e o e-mail do MyMemory): guardadas **criptografadas** (detalhes abaixo), nunca escritas em
   log, nunca devolvidas para a interface (aparecem como `••••••••`) e fora de exportações de histórico/perfis.
 
 **O que é enviado, e para onde**
 
-- Ao traduzir com um tradutor **online** (Google, MyMemory, LibreTranslate, Lingva, Microsoft), vai **só o texto reconhecido**
-  pelo OCR para o serviço escolhido — **nunca imagens**. Com Argos (offline) ou modo **somente cache**, nada sai do PC.
+- Ao traduzir com um tradutor **online**, vai **só o texto reconhecido** pelo OCR para o serviço que traduziu (a tabela
+  [Tradutores](#tradutores) e cada cartão mostram quem recebe) — **nunca imagens**. Os pedidos não seguem redirecionamentos. Com Argos (offline) ou modo **somente cache**, nada sai do PC.
 - **Gemini** (se você escolher): vai só o texto reconhecido (e o "contexto do jogo", se preenchido) para a API do Google; a
   chave segue no cabeçalho da requisição HTTPS. **Acompanhe você mesmo o consumo de tokens e os limites da sua chave** no site
   oficial: <https://aistudio.google.com>. O uso e eventuais custos são de sua responsabilidade.
@@ -248,7 +289,7 @@ cópias `.bak`/`.tmp`). Se a chave salva não puder ser aberta (outro PC, outro 
 
 **Como remover a chave**
 
-Em **Opções › IA › Gemini › Remover chave** (ou **Opções › Tradução** para as chaves do Azure/LibreTranslate), confirme e o
+Em **Opções › IA › Gemini › Remover chave** (ou **Opções › Tradução** › cartão do serviço para as chaves dos tradutores), confirme e o
 programa: regrava as configurações sem a chave (sobrescrevendo a cópia antiga), apaga sobras `.tmp`/`.bak`, procura a chave em
 logs e arquivos da pasta de configuração e a substitui por `[chave removida]`, e limpa a chave da memória do backend. Se a chave
 vier da variável de ambiente `GEMINI_API_KEY`/`GOOGLE_API_KEY`, o programa avisa; no Windows ele oferece (com uma segunda
@@ -340,7 +381,7 @@ O executável do backend tem um autoteste oculto: `EGTBackend.exe --selftest` (l
 Segurança: o backend só escuta em `127.0.0.1`, exige o token em **toda** rota (header `X-EGT-Token`; `?token=` no WebSocket),
 valida o header `Host` (anti DNS-rebinding) e a origem (CORS) e mascara chaves secretas nas respostas.
 O renderer roda com `contextIsolation`, `sandbox`, `nodeIntegration` desligado e CSP estrita; links externos só `https`.
-**Nenhuma chave de API vai no projeto**: chaves (Gemini/Azure/Libre) vêm das Opções (guardadas criptografadas — DPAPI no
+**Nenhuma chave de API vai no projeto**: chaves (Gemini e tradutores) vêm das Opções (guardadas criptografadas — DPAPI no
 Windows) ou da variável de ambiente `GEMINI_API_KEY`, e ficam só na pasta de configuração do usuário
 (Windows: `%APPDATA%\EasyGameTranslator`; Linux: `~/.config/EasyGameTranslator`). Veja [Segurança e privacidade](#segurança-e-privacidade).
 
@@ -398,7 +439,9 @@ Componentes de terceiros (fontes OFL, Electron, bibliotecas Python etc.): [THIRD
 
 **Easy Game Translator** is a real-time screen translator for games by **CleitinhoDEV**: select a region of the screen,
 it reads the text with OCR (RapidOCR built in; Tesseract/EasyOCR optional) and shows the translation live — in the main
-window or in a transparent always-on-top **Box Mode** overlay. Features: online and offline translators with SQLite cache,
+window or in a transparent always-on-top **Box Mode** overlay. Features: 14 translators (Google*, Bing*, Yandex* — *unofficial
+endpoints —, MyMemory, Mozhi, Apertium, self-hosted LibreTranslate, DeepL, Azure, Google Cloud, Baidu, Youdao, NiuTrans with
+your own encrypted key, offline Argos), each with its own card, privacy note and live test, plus a SQLite cache,
 dual channel (two regions), per-game profiles, glossary/replacements, history export, optional AI (Gemini/Ollama),
 an optional component manager, **20 UI languages** (including Arabic RTL) and 14 fonts for the translated text.
 

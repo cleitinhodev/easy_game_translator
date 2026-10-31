@@ -61,22 +61,42 @@ def normalize_lang(code: str) -> str:
     return low.split("-")[0] if "-" in low else low
 
 
-def engine_lang(engine: str, code: str) -> str:
-    """Converte nosso código para o dialeto do motor de tradução."""
+# ISO 639-1 → ISO 639-3 (Apertium)
+ISO3 = {"en": "eng", "es": "spa", "pt": "por", "fr": "fra", "de": "deu", "it": "ita", "ca": "cat", "gl": "glg",
+        "hi": "hin", "ur": "urd", "ru": "rus", "ar": "ara", "id": "ind", "tr": "tur", "bn": "ben", "ja": "jpn",
+        "ko": "kor", "zh-CN": "zho", "zh-TW": "zho", "eo": "epo", "nl": "nld", "ro": "ron", "oc": "oci", "eu": "eus"}
+
+_ZH = {  # (simplificado, tradicional) por motor
+    "bing": ("zh-Hans", "zh-Hant"), "microsoft": ("zh-Hans", "zh-Hant"), "deepl": ("ZH-HANS", "ZH-HANT"),
+    "baidu": ("zh", "cht"), "niutrans": ("zh", "cht"), "youdao": ("zh-CHS", "zh-CHT"),
+    "yandex": ("zh", "zh"), "argos": ("zh", "zh"), "mozhi": ("zh", "zh-TW"), "mozhi:yandex": ("zh", "zh"),
+    "mozhi:google": ("zh-CN", "zh-TW"), "libre": ("zh", "zh-Hant"),
+}
+_BAIDU = {"ja": "jp", "ko": "kor", "fr": "fra", "es": "spa", "ar": "ara", "bn": "ben", "ur": "urd"}
+
+
+def engine_lang(engine: str, code: str, *, source: bool = False) -> str:
+    """Converte nosso código para o dialeto do motor de tradução. `source=True` para o idioma de origem
+    (alguns serviços, como o DeepL, usam códigos diferentes na origem)."""
     code = normalize_lang(code)
     if not code:
         return "auto"
     if code == "zh-HK":  # nenhum motor gratuito distingue HK
         code = "zh-TW"
-    if engine == "argos":
-        return "zh" if code.startswith("zh") else code
-    if engine in ("libre", "lingva"):
-        if code.startswith("zh"):
-            return "zh-Hant" if (code == "zh-TW" and engine == "libre") else "zh"
-        return code
+    if code.startswith("zh") and engine in _ZH:
+        simp, trad = _ZH[engine]
+        return trad if code == "zh-TW" else simp
+    if engine == "apertium":
+        return ISO3.get(code, code)
     if engine == "mymemory":
         return {"pt": "pt-BR", "en": "en-GB"}.get(code, code)
-    return code  # google / microsoft / IA
+    if engine == "deepl":
+        if source:
+            return code.split("-")[0].upper()
+        return {"pt": "PT-BR", "en": "EN-US"}.get(code, code.upper())
+    if engine in ("baidu", "niutrans"):
+        return _BAIDU.get(code, code) if engine == "baidu" else code
+    return code  # google / gcloud / yandex / mozhi / IA
 
 
 # ----------------------------------------------------------------- Alfabetos

@@ -8,7 +8,7 @@ export function Titlebar() {
   const t = useT()
   const running = useStore((s) => s.running)
   const conn = useStore((s) => s.conn)
-  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.0.7')
+  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.0.8')
   const platform = window.egt?.platform ?? 'linux'
   const openMenu = (e: React.MouseEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect()

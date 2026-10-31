@@ -6,15 +6,25 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-class TranslationError(Exception):
-    """Falha ao traduzir (rede, resposta inválida...)."""
+class TranslationError(Exception):  # noqa: N818
+    """Falha ao traduzir (rede, resposta inválida...). `code` é um código curto que a interface traduz
+    (network, timeout, no_key, bad_key, quota, rate_limit, unsupported_lang, empty, echo, bad_response, http, config)."""
+
+    code = "http"
+
+    def __init__(self, msg: str = "", code: Optional[str] = None):
+        super().__init__(msg)
+        if code:
+            self.code = code
 
 
 class RateLimited(TranslationError):
     """Limite de requisições atingido; `retry_after` em segundos (opcional)."""
 
-    def __init__(self, msg: str = "limite de requisições", retry_after: Optional[float] = None):
-        super().__init__(msg)
+    code = "rate_limit"
+
+    def __init__(self, msg: str = "limite de requisições", retry_after: Optional[float] = None, code: Optional[str] = None):
+        super().__init__(msg, code)
         self.retry_after = retry_after
 
 
@@ -29,6 +39,7 @@ class TranslationResult:
     tgt: str = ""
     elapsed_ms: float = 0.0
     attempts: list = field(default_factory=list)   # [(engine, "ok"/erro)]
+    codes: dict = field(default_factory=dict)      # {engine: código do erro} (a interface traduz)
 
 
 class Translator(ABC):
@@ -40,6 +51,10 @@ class Translator(ABC):
     @abstractmethod
     def available(self) -> tuple[bool, str]:
         """(pronto para uso?, motivo). Nunca levanta exceção."""
+
+    def unavailable_code(self, why: str) -> str:
+        """Código de erro quando available() é falso: falta chave (no_key) ou configuração (config)."""
+        return "no_key" if "chave" in why or "key" in why.lower() else "config"
 
     @abstractmethod
     def translate(self, text: str, src: str, tgt: str) -> str:
