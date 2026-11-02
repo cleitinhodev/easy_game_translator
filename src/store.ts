@@ -1,14 +1,14 @@
 import { useCallback } from 'react'
 import { create } from 'zustand'
 import { api, connectEvents, configureApi, type WsMessage } from '@/api/client'
-import type { Channel, ChannelView, CompJob, Metrics, Profile, Settings, Snapshot, TrEngine, OcrEngine } from '@/lib/types'
+import type { AutoCheck, Channel, ChannelView, CompJob, Metrics, Profile, ScriptInfo, Settings, Snapshot, TrEngine, OcrEngine } from '@/lib/types'
 import { mapBackend } from '@/lib/backendMsg'
 import { resolveLang, systemLanguages, translate, type Lang } from '@/lib/i18n'
 
 export type ToastKind = 'info' | 'ok' | 'warn' | 'error'
 export interface Toast { id: number; kind: ToastKind; text: string; ttl: number }
 export type ModalId = null | 'manual' | 'help' | 'profile-save' | 'about'
-export type TabId = 'general' | 'ocr' | 'translation' | 'replace' | 'ai' | 'history' | 'updates' | 'bugs'
+export type TabId = 'general' | 'ocr' | 'translation' | 'replace' | 'ai' | 'scripts' | 'history' | 'updates' | 'bugs'
 
 const emptyView = (): ChannelView => ({ original: '', translated: '', ok: true, error: '', engine: '', cached: false, confidence: null, ms: 0, src: '', rev: 0, orev: 0, ts: 0, empty: false, pending: false })
 
@@ -21,6 +21,8 @@ interface State {
   profiles: string[]
   ocr: OcrEngine[]
   engines: TrEngine[]
+  autocheck: AutoCheck | null
+  script: ScriptInfo | null
   metrics: Metrics | null
   running: boolean
   channels: Record<Channel, ChannelView>
@@ -75,6 +77,8 @@ export const useStore = create<State>((set, get) => {
       case 'profiles': set({ profiles: m.data as string[] }); break
       case 'settings': set({ settings: m.data as Settings, lang: resolveLang((m.data as Settings).ui.language, systemLanguages()) }); break
       case 'engines': set({ engines: m.data as TrEngine[] }); break
+      case 'autocheck': set({ autocheck: m.data as AutoCheck }); break
+      case 'script': set({ script: m.data as ScriptInfo }); break
       case 'metrics': {
         const mt = m.data as Metrics
         set({ metrics: mt, running: mt.running })
@@ -148,13 +152,13 @@ export const useStore = create<State>((set, get) => {
   const applySnapshot = (s: Snapshot) => {
     set((st) => ({
       snapshot: s, profile: s.profile, settings: s.settings, profiles: s.profiles, ocr: s.ocr, engines: s.engines,
-      metrics: s.metrics, running: s.running, lang: resolveLang(s.settings.ui.language, systemLanguages()), ready: true,
+      metrics: s.metrics, running: s.running, autocheck: s.autocheck ?? st.autocheck, script: s.script ?? st.script, lang: resolveLang(s.settings.ui.language, systemLanguages()), ready: true,
       boxOpen: st.boxOpen,
     }))
   }
 
   return {
-    conn: 'connecting', ready: false, snapshot: null, profile: null, settings: null, profiles: [], ocr: [], engines: [],
+    conn: 'connecting', ready: false, snapshot: null, profile: null, settings: null, profiles: [], ocr: [], engines: [], autocheck: null, script: null,
     metrics: null, running: false,
     channels: { uni: emptyView(), a: emptyView(), b: emptyView() },
     thumbs: { uni: '', a: '', b: '' },
@@ -170,7 +174,7 @@ export const useStore = create<State>((set, get) => {
       if (window.egt) cfg = await window.egt.getConfig()
       else {
         const q = new URLSearchParams(location.search)   // modo navegador (testes/dev sem Electron)
-        cfg = { port: Number(q.get('port')), token: q.get('token') || '', platform: 'linux', version: '4.0.8', isDev: true, material: 'none', appOrigin: '', e2e: false, userData: '' }
+        cfg = { port: Number(q.get('port')), token: q.get('token') || '', platform: 'linux', version: '4.0.9', isDev: true, material: 'none', appOrigin: '', e2e: false, userData: '' }
       }
       configureApi(cfg.port, cfg.token)
       set({ appVersion: cfg.version || '' })

@@ -1,5 +1,5 @@
 """Easy Game Translator v4 — backend local (Python) da interface Electron."""
 
-__version__ = "4.0.8"
+__version__ = "4.0.9"
 APP_NAME = "Easy Game Translator"
 APP_AUTHOR = "CleitinhoDEV"

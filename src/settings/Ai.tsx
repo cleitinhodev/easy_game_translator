@@ -49,8 +49,15 @@ export function AiTab() {
   const [saved, setSaved] = useState(false)
   useEffect(() => setCtx(ai.context), [ai.context])
   const mode = ai.mode
+  const openDrawer = useStore((s) => s.openDrawer)
   return (
     <div className="s-page">
+      {settings.script?.enabled && (
+        <div className="sc-banner" role="status" data-testid="ai-script-banner">
+          <p>{t('sc.banner_ai')}</p>
+          <Button size="sm" onClick={() => openDrawer('scripts')}>{t('sc.open')}</Button>
+        </div>
+      )}
       <Section title={t('ai.title')} desc={t('ai.tip')} right={<Chip tone={mode !== 'off' ? 'accent' : 'default'}>{mode === 'off' ? t('common.off') : mode === 'gemini' ? 'Gemini' : 'Ollama'}</Chip>}>
         <Row label={t('ai.mode')} hint={t('ai.mode_tip')}>
           <Segmented size="sm" value={mode} label={t('ai.mode')} onChange={(v) => patch({ 'ai.mode': v })}

@@ -7,8 +7,11 @@ from __future__ import annotations
 
 import logging
 import re
+import os
 import socket
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, wait
 from typing import Callable, Optional
 
 from . import ocr as ocr_mod
@@ -25,6 +28,7 @@ from .profiles import Profile, ProfileStore
 from .translate import TranslationCache, TranslationManager, build_engines
 from .translate.base import TranslationResult
 from .translate.manager import engine_factories
+from .userscript import ScriptError, ScriptRunner
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +58,12 @@ class AppController:
             lambda: bool(self.settings.get("translation.cache_only", False)))
         self.pipeline = Pipeline(self.grabber.grab, self.ocr.get_or_fallback, self.translate_pipeline_text,
                                  replace_fn=self.glossary.apply_replacements)
+        self.script = ScriptRunner(self.settings)
+        self.pipeline.batch_fn = self.translate_script_batch       # modo Scripts: canal A + B numa chamada só
+        self.pipeline.batch_active = self.script.active
+        self.autocheck_state: dict = {"state": "idle", "done": 0, "total": 0, "passed": [], "failed": [],
+                                      "activated": [], "running": []}
+        self._ac_lock = threading.Lock()
         self.running = False
         self.last_error = ""
         self.last_translation: dict = {}
@@ -171,7 +181,7 @@ class AppController:
         paths = paths or []
         if reset_ocr or any(p.startswith("ocr.") for p in paths):
             self.pipeline.refresh("full")          # motor/idiomas/GPU do OCR: recaptura e refaz o OCR
-        elif any(p.startswith(("translation.", "ai.")) for p in paths):
+        elif any(p.startswith(("translation.", "ai.", "script.")) for p in paths):
             self.pipeline.refresh("translate")     # motores, ordem, modo somente-cache, IA: só retraduz
 
     # ------------------------------------------------------------ componentes (ajuda opcional para instalar itens)
@@ -273,8 +283,29 @@ class AppController:
         return eid not in ("argos", "")
 
     # -------------------------------------------------------------- tradução
+    def translate_script_batch(self, inputs: list[str], src: str, tgt: str,
+                               channels: Optional[list[str]] = None) -> list[TranslationResult]:
+        """Modo Scripts: entrega 1 ou 2 textos ao script do usuário e recebe 1 ou 2 textos. Sem cache e sem a fila
+        de tradutores (nenhum serviço recebe o texto). Nunca levanta: erro vira resultado com ok=False."""
+        t0 = time.perf_counter()
+        try:
+            r = self.script.run(inputs, src, tgt, channels)
+            ms = (time.perf_counter() - t0) * 1000
+            return [TranslationResult(o, engine="script", src=src, tgt=tgt, elapsed_ms=ms) for o in r.outputs]
+        except ScriptError as exc:
+            log.warning("script: %s", exc)
+            msg = exc.user_message()
+        except Exception as exc:  # noqa: BLE001
+            log.exception("erro inesperado no script")
+            msg = f"Script [start]: {type(exc).__name__}"
+        ms = (time.perf_counter() - t0) * 1000
+        return [TranslationResult("", engine="script", ok=False, error=msg, src=src, tgt=tgt, elapsed_ms=ms)
+                for _ in inputs]
+
     def translate_pipeline_text(self, text: str, src: str, tgt: str) -> TranslationResult:
-        """Glossário (protege nomes) → cache/cadeia de motores → restaura nomes."""
+        """Glossário (protege nomes) → cache/cadeia de motores → restaura nomes. Modo Scripts: só o script."""
+        if self.script.active():
+            return self.translate_script_batch([(text or "").strip()], src, tgt, ["uni"])[0]
         prot, mapping = self.glossary.protect(text)
         res = self.manager.translate(prot, src, tgt)
         if res.ok:
@@ -359,6 +390,7 @@ class AppController:
         facts = engine_factories(self.settings)
         order = [e for e in tr["order"] if e in facts] + [e for e in facts if e not in tr["order"]]
         status = self.manager.engine_status()
+        probes = self.manager.probe_status()
         out = []
         for eid in order:
             try:
@@ -377,7 +409,7 @@ class AppController:
             out.append({"id": eid, "name": name, "online": bool(online), "available": bool(ok), "detail": why,
                         "enabled": eid in tr["enabled"], "cooldown": round(stt.get("cooldown", 0.0)),
                         "error": stt.get("error", ""), "code": stt.get("code", ""),
-                        "last_ok": stt.get("last_ok", 0.0), "meta": meta})
+                        "last_ok": stt.get("last_ok", 0.0), "probe": probes.get(eid), "meta": meta})
         return out
 
     def test_engine(self, eid: str, text: str, src: str, tgt: str) -> dict:
@@ -400,6 +432,93 @@ class AppController:
             res["instance"] = getattr(eng, "last_instance", "")
         return res
 
+    # ------------------------------------------------------------ verificação automática ao abrir
+    AUTOCHECK_TIMEOUT = 6.0        # por serviço (segundos)
+    AUTOCHECK_TOTAL = 20.0         # teto da verificação inteira
+
+    def autocheck_skip_reason(self) -> str:
+        if os.environ.get("EGT_NO_AUTOCHECK") == "1":
+            return "disabled_env"
+        if not self.settings.get("translation.autocheck", True):
+            return "disabled"
+        if self.script.active():
+            return "script"
+        if self.settings.get("translation.cache_only", False):
+            return "cache_only"
+        return ""
+
+    def run_autocheck(self, on_update: Optional[Callable[[dict], None]] = None, force: bool = False) -> dict:
+        """Testa em paralelo (texto de exemplo fixo, tempo curto) cada tradutor que PODE funcionar — os grátis, os com
+        chave salva, o LibreTranslate com servidor e o Argos instalado — e LIGA os que traduzirem. Os desligados que
+        falharem continuam desligados; os ligados que falharem ficam em espera (a fila pula). Nunca levanta."""
+        notify = on_update or (lambda st: None)
+        if not self._ac_lock.acquire(blocking=False):
+            return dict(self.autocheck_state)
+        try:
+            why = "" if force and os.environ.get("EGT_NO_AUTOCHECK") != "1" else self.autocheck_skip_reason()
+            if why:
+                self.autocheck_state = {"state": "skipped", "reason": why, "done": 0, "total": 0, "passed": [],
+                                        "failed": [], "activated": [], "running": []}
+                notify(dict(self.autocheck_state))
+                return dict(self.autocheck_state)
+            facts = engine_factories(self.settings, timeout=self.AUTOCHECK_TIMEOUT)
+            cands = []
+            for eid, fac in facts.items():
+                try:
+                    eng = fac()
+                    if eng.available()[0]:
+                        cands.append((eid, eng))
+                except Exception:  # noqa: BLE001
+                    continue
+            tgt = self.profile.target or "pt"
+            text, src = ("Olá, aventureiro! O portão está fechado.", "pt") if tgt.startswith("en") \
+                else ("Hello, adventurer! The gate is closed.", "en")
+            st = {"state": "running", "done": 0, "total": len(cands), "passed": [], "failed": [], "activated": [],
+                  "running": [e for e, _ in cands], "started": time.time()}
+            self.autocheck_state = st
+            notify(dict(st))
+            lock = threading.Lock()
+
+            def one(eid, eng):
+                try:
+                    r = self.manager.test_engine(eng, text, src, tgt)
+                except Exception:  # noqa: BLE001
+                    r = {"ok": False, "code": "http"}
+                self.manager.record_probe(eid, r, "auto")
+                with lock:
+                    (st["passed"] if r.get("ok") else st["failed"]).append(eid)
+                    st["done"] += 1
+                    if eid in st["running"]:
+                        st["running"].remove(eid)
+                notify(dict(st))
+                return r
+
+            ex = ThreadPoolExecutor(max_workers=8, thread_name_prefix="egt-autocheck")
+            futs = [ex.submit(one, eid, eng) for eid, eng in cands]
+            wait(futs, timeout=self.AUTOCHECK_TOTAL)
+            ex.shutdown(wait=False, cancel_futures=True)
+            with lock:
+                passed = list(st["passed"])
+            tr = self.settings.section("translation")
+            enabled = list(tr.get("enabled", []))
+            new = [e for e in passed if e not in enabled]
+            if new:
+                order = [e for e in tr.get("order", []) if e in facts] + [e for e in facts if e not in tr.get("order", [])]
+                en = set(enabled) | set(new)
+                self.settings.set("translation.enabled", [e for e in order if e in en] +
+                                  [e for e in enabled if e not in order])
+            st.update(state="done", activated=new, finished=time.time())
+            log.info("verificação dos tradutores: ok=%s falharam=%s ligados agora=%s", passed, st["failed"], new)
+            notify(dict(st))
+            return dict(st)
+        except Exception:  # noqa: BLE001
+            log.exception("falha na verificação automática dos tradutores")
+            self.autocheck_state = {**self.autocheck_state, "state": "error"}
+            notify(dict(self.autocheck_state))
+            return dict(self.autocheck_state)
+        finally:
+            self._ac_lock.release()
+
     def profile_dict(self) -> dict:
         d = self.profile.to_dict()
         d["channels"] = {k: list(v) for k, v in self.profile.channels().items()}
@@ -420,6 +539,8 @@ class AppController:
             "languages": [{"code": c, "name": n} for c, n in TARGET_LANGUAGES],
             "monitors": list_monitors(),
             "engines": self.translation_engines(),
+            "autocheck": dict(self.autocheck_state),
+            "script": self.script.info(),
             "metrics": self.metrics(),
         }
 

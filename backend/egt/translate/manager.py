@@ -62,6 +62,7 @@ class TranslationManager:
         self._cache_only = cache_only_provider
         self._clock = clock
         self._state: dict[str, _EngineState] = {}
+        self.probe: dict[str, dict] = {}           # último teste de cada motor (não some com reset_backoff)
         self._lock = threading.Lock()
         self.stats = {"requests": 0, "cache_hits": 0, "live": 0, "errors": 0, "passthrough": 0}
         self.last_latency_ms = 0.0
@@ -124,7 +125,17 @@ class TranslationManager:
             self._ok(eng.id)
             out.update(ok=True, text=res)
         out["ms"] = round((time.perf_counter() - t0) * 1000)
+        self.record_probe(eng.id, out)
         return out
+
+    def record_probe(self, eid: str, out: dict, source: str = "manual") -> None:
+        with self._lock:
+            self.probe[eid] = {"ok": bool(out.get("ok")), "code": out.get("code", ""), "ms": out.get("ms", 0),
+                               "at": time.time(), "source": source}
+
+    def probe_status(self) -> dict[str, dict]:
+        with self._lock:
+            return {k: dict(v) for k, v in self.probe.items()}
 
     def reset_backoff(self) -> None:
         with self._lock:
@@ -214,10 +225,10 @@ class TranslationManager:
         return res
 
 
-def engine_factories(settings) -> dict:
+def engine_factories(settings, timeout: Optional[float] = None) -> dict:
     """{id: fábrica} de todos os motores comuns (sem I/O de rede). Catálogo em providers.py."""
     from .providers import factories
-    return factories(settings)
+    return factories(settings, timeout)
 
 
 AI_MODES = ("off", "gemini", "ollama")

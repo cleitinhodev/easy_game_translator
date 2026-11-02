@@ -31,6 +31,8 @@ from ..languages import ALPHABETS
 from ..ocr.tesseract import TesseractBackend, find_tesseract
 from ..preprocess import preprocess
 from ..profiles import Profile
+from ..userscript import ScriptError
+from ..userscript import inspect as script_inspect
 from .hub import EventHub
 
 log = logging.getLogger(__name__)
@@ -101,6 +103,23 @@ class EngineTestBody(BaseModel):
     text: str = Field(default="Hello, adventurer! The gate is closed.", min_length=1, max_length=2000)
     src: str = Field(default="", max_length=12)
     tgt: str = Field(default="pt", min_length=2, max_length=12)
+
+
+class ScriptPathBody(BaseModel):
+    path: str = Field(min_length=1, max_length=2048)
+
+
+class ScriptApproveBody(BaseModel):
+    path: str = Field(min_length=1, max_length=2048)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    confirmed: bool = False
+    enable: bool = True
+
+
+class ScriptTestBody(BaseModel):
+    inputs: list[str] = Field(default_factory=lambda: ["Hello, adventurer! The gate is closed."], min_length=1, max_length=2)
+    src: str = Field(default="en", max_length=12)
+    tgt: str = Field(default="", max_length=12)
 
 
 class ArgosBody(BaseModel):
@@ -185,6 +204,8 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         hub.start(asyncio.get_running_loop())
+        if not os.environ.get("EGT_NO_AUTOCHECK") == "1" and getattr(app.state, "autocheck_on_start", True):
+            start_autocheck()                  # durante a intro: testa os tradutores e liga os que responderem
         try:
             yield
         finally:
@@ -221,6 +242,20 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
 
     def broadcast_profile() -> None:
         hub.publish({"type": "profile", "data": ctrl.profile_dict()})
+
+    def publish_autocheck(st: dict) -> None:
+        hub.publish({"type": "autocheck", "data": st})
+        hub.publish({"type": "engines", "data": ctrl.translation_engines()})
+        if st.get("state") == "done" and st.get("activated"):
+            broadcast_settings()
+
+    def start_autocheck(force: bool = False) -> None:
+        import threading
+        threading.Thread(target=ctrl.run_autocheck, kwargs={"on_update": publish_autocheck, "force": force},
+                         name="egt-autocheck-main", daemon=True).start()
+
+    def broadcast_script() -> None:
+        hub.publish({"type": "script", "data": ctrl.script.info()})
 
     def broadcast_settings() -> None:
         hub.publish({"type": "settings", "data": public_view(ctrl.settings)})
@@ -353,7 +388,79 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
         broadcast_settings()
         if any(p.startswith(("translation.", "ai.")) for p in changed):
             hub.publish({"type": "engines", "data": ctrl.translation_engines()})
+        if any(p.startswith("script.") for p in changed):
+            broadcast_script()
         return {"changed": changed, "settings": public_view(ctrl.settings)}
+
+    # ---------------------------------------------------------------- modo Scripts
+
+    def _script_err(exc: ScriptError) -> dict:
+        return {"ok": False, "code": exc.code, "detail": exc.detail, "message": exc.user_message()}
+
+    @api.get("/script")
+    def script_info():
+        return ctrl.script.info()
+
+    @api.post("/script/inspect")
+    def script_inspect_ep(body: ScriptPathBody):
+        """Dados para a confirmação: caminho completo, tamanho, SHA-256 e interpretador. Não executa nada."""
+        try:
+            return {"ok": True, **script_inspect(body.path)}
+        except ScriptError as exc:
+            return _script_err(exc)
+        except OSError as exc:
+            return {"ok": False, "code": "not_found", "detail": type(exc).__name__, "message": "Script [not_found]"}
+
+    @api.post("/script/approve")
+    def script_approve(body: ScriptApproveBody):
+        """O usuário confirmou ESTE arquivo com ESTE hash. Se o arquivo mudou entre ver e confirmar, recusa."""
+        if not body.confirmed:
+            raise HTTPException(400, "confirmação necessária")
+        try:
+            info = script_inspect(body.path)
+        except (ScriptError, OSError) as exc:
+            return _script_err(exc) if isinstance(exc, ScriptError) else {"ok": False, "code": "not_found", "detail": "", "message": "Script [not_found]"}
+        if info["sha256"] != body.sha256:
+            return {"ok": False, "code": "hash_changed", "detail": info["sha256"][:12], "message": "Script [hash_changed]"}
+        ctrl.settings.set("script.path", info["path"], save=False)
+        ctrl.settings.set("script.sha256", info["sha256"], save=False)
+        changed = ["script.path", "script.sha256"]
+        if body.enable:
+            ctrl.settings.set("script.enabled", True, save=False)
+            changed.append("script.enabled")
+            if ctrl.settings.get("ai.mode", "off") != "off":
+                ctrl.settings.set("ai.mode", "off", save=False)
+                changed.append("ai.mode")
+        ctrl.settings.save()
+        ctrl.script.last_error = None
+        ctrl.settings_changed(paths=changed)
+        broadcast_settings()
+        broadcast_script()
+        return {"ok": True, "script": ctrl.script.info(), "settings": public_view(ctrl.settings)}
+
+    @api.post("/script/forget")
+    def script_forget():
+        for k, v in (("script.enabled", False), ("script.path", ""), ("script.sha256", "")):
+            ctrl.settings.set(k, v, save=False)
+        ctrl.settings.save()
+        ctrl.settings_changed(paths=["script.enabled"])
+        broadcast_settings()
+        broadcast_script()
+        return {"ok": True, "script": ctrl.script.info(), "settings": public_view(ctrl.settings)}
+
+    @api.post("/script/test")
+    def script_test(body: ScriptTestBody):
+        """Roda o script aprovado com 1 ou 2 textos de exemplo (mesmo contrato da captura). Mesmo desligado."""
+        tgt = body.tgt.strip() or ctrl.profile.target
+        t0 = time.perf_counter()
+        try:
+            r = ctrl.script.run([x[:5000] for x in body.inputs], body.src.strip(), tgt,
+                                ["uni"] if len(body.inputs) == 1 else ["a", "b"])
+        except ScriptError as exc:
+            broadcast_script()
+            return {**_script_err(exc), "ms": round((time.perf_counter() - t0) * 1000)}
+        broadcast_script()
+        return {"ok": True, "outputs": r.outputs, "format": r.format, "ms": round(r.ms), "stderr": r.stderr[-600:]}
 
     # ---------------------------------------------------------------- OCR
     @api.get("/ocr/engines")
@@ -416,6 +523,16 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
     @api.get("/translation/engines")
     def tr_engines():
         return ctrl.translation_engines()
+
+    @api.get("/translation/autocheck")
+    def tr_autocheck_state():
+        return ctrl.autocheck_state
+
+    @api.post("/translation/autocheck")
+    def tr_autocheck_run():
+        """Roda a verificação de novo (botão "Verificar agora"). Em segundo plano; o progresso chega pelo WebSocket."""
+        start_autocheck(force=True)
+        return {"ok": True}
 
     @api.post("/translation/test")
     def tr_test(body: TestTranslationBody):

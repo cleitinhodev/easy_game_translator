@@ -105,12 +105,12 @@ def test_migration_lingva_to_mozhi_and_old_libre_default(tmp_path):
                                              "libre_url": "http://localhost:5000", "lingva_url": "https://lingva.ml"}}))
     s = Settings(f)
     assert s.get("translation.enabled") == ["google", "mozhi", "mymemory"]
-    assert s.get("translation.order")[:4] == ["google", "mymemory", "libre", "mozhi"]
+    assert s.get("translation.order")[:4] == ["mymemory", "google", "libre", "mozhi"]   # 4.0.9: MyMemory em 1º
     assert s.get("translation.libre_url") == ""
     disk = json.loads(f.read_text())["translation"]
     assert "lingva_url" not in disk and "lingva" not in disk["enabled"]
     names = [e.id for e in build_engines(s, "off")]
-    assert names == ["google", "mymemory", "mozhi"]
+    assert names == ["mymemory", "google", "mozhi"]
 
 
 def test_custom_libre_server_kept(tmp_path):
@@ -121,7 +121,7 @@ def test_custom_libre_server_kept(tmp_path):
 
 def test_new_defaults(tmp_path):
     s = Settings(tmp_path / "s.json")
-    assert [e.id for e in build_engines(s, "off")] == ["google", "bing", "mymemory"]
+    assert [e.id for e in build_engines(s, "off")] == ["mymemory", "google", "bing"]   # 4.0.9: MyMemory em 1º
 
 
 def test_all_new_secrets_encrypted_masked_and_removable(tmp_path):

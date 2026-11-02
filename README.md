@@ -9,7 +9,7 @@ Funciona **offline** depois de instalado (OCR local, cache de traduções e moto
 ![Janela principal traduzindo](docs/screenshots/translating.png)
 
 **Índice:** [Iniciantes (passo a passo)](#iniciantes) · [Recursos](#recursos) · [Download](#download-e-instalação) ·
-[Como usar](#como-usar) · [Perguntas frequentes](#perguntas-frequentes) · [Compilar](#compilar-a-partir-do-código) ·
+[Como usar](#como-usar) · [Scripts](#scripts) · [Perguntas frequentes](#perguntas-frequentes) · [Compilar](#compilar-a-partir-do-código) ·
 [Licença](#licença) · [English](#english-summary)
 
 > 🇺🇸 [English summary below](#english-summary)
@@ -25,6 +25,9 @@ Funciona **offline** depois de instalado (OCR local, cache de traduções e moto
 - **Canal duplo**: duas regiões ao mesmo tempo (ex.: chat + legenda).
 - **Perfis por jogo**, **glossário/substituições**, histórico (exportar TXT/CSV/JSON), atalhos globais configuráveis.
 - **IA opcional** (desligada por padrão): **Gemini** ou **Ollama** local — só a escolhida entra na tradução.
+- **Scripts** (novo na 4.0.9): use o **seu próprio script de tradução** (Python, Node.js, PowerShell, .bat, .sh, .exe…) no
+  lugar dos tradutores ou da IA — veja [Scripts](#scripts).
+- **Verificação automática na abertura**: durante a intro o programa testa os tradutores e **liga sozinho** os que responderem.
 - **Privacidade**: capturas e OCR ficam no seu PC; chaves de API ficam **criptografadas** e presas a este computador (veja [Segurança e privacidade](#segurança-e-privacidade)).
 - **Gerenciador de componentes** (Opções › Atualizações): instala só o que você escolher usar, com tamanho, confirmação e progresso.
 - **Interface em 20 idiomas** (pt-BR, en, es, fr, de, it, ru, uk, pl, tr, nl, id, vi, th, ar com RTL, hi, ja, ko, zh-CN, zh-TW).
@@ -219,14 +222,23 @@ confira o SHA-256 e clique em **Mais informações → Executar assim mesmo**.
 Em **Opções › Tradução** cada serviço tem um cartão com: liga/desliga, ordem de prioridade (↑ ↓), **quem recebe o texto**
 (empresa e país), limite grátis, campos de configuração e um **Testar** que traduz um texto de exemplo só com aquele serviço
 (ignora o cache e o liga/desliga) e mostra se está **online** ou o motivo do erro. **Testar os ligados** testa todos de uma vez.
-Nada é testado sozinho ao abrir a aba. Na tradução normal os serviços ligados são tentados em ordem: se um falhar, o próximo assume
-(e o erro de cada um aparece no teste da cadeia).
+**Fila**: na tradução normal os serviços ligados são tentados **em ordem** — o primeiro que responder entrega a tradução e os
+seguintes **não são chamados**; só se ele falhar o próximo assume (e o serviço que falhou espera um pouco antes de ser tentado de
+novo). A ordem padrão começa pelo **MyMemory** (o mais estável nos testes), depois Google, Bing, Mozhi, Yandex, Apertium…;
+na atualização para a 4.0.9 o MyMemory vai para o 1º lugar uma única vez, sem mexer no que você ligou/desligou (se você
+reordenar depois, sua ordem é respeitada).
+
+**Verificação automática (4.0.9)**: ao abrir o programa, durante a intro, os tradutores grátis (e os com chave salva, e
+LibreTranslate/Argos se configurados) são testados **em paralelo** com uma frase curta e tempo limite curto. Os que responderem
+são **ligados automaticamente** e o cartão mostra **online**; os que falharem mostram o motivo — nenhum é desligado. A
+verificação só manda a frase de teste (nunca capturas) e pode ser desligada em Opções › Tradução › **Verificar tradutores ao
+abrir**; o botão **Verificar agora** repete o teste. Ela não roda em modo Scripts nem em modo somente cache.
 
 | Serviço | Tipo | Chave? | Limite grátis (oficial, out/2026) | Quem recebe o texto |
 |---|---|---|---|---|
+| MyMemory | grátis (API pública) | não (e-mail opcional) | 5.000 caracteres/dia (50.000 com e-mail) | Translated (Itália) |
 | Google Translate | grátis, **não oficial** ¹ | não | uso razoável | Google (EUA) |
 | Bing Translator | grátis, **não oficial** ¹ | não | uso razoável | Microsoft (EUA) |
-| MyMemory | grátis (API pública) | não (e-mail opcional) | 5.000 caracteres/dia (50.000 com e-mail) | Translated (Itália) |
 | Mozhi | grátis (instâncias de voluntários) | não | uso razoável | a instância Mozhi → o motor escolhido (DuckDuckGo/Bing, Yandex, Google) |
 | Yandex Translate | grátis, **não oficial** ¹ | não | uso razoável | Yandex (Rússia) |
 | Apertium | grátis, código aberto | não | uso razoável (poucos pares de idiomas) | apertium.org ou o servidor que você informar |
@@ -253,6 +265,46 @@ momento (o cartão avisa). Os limites acima são os publicados pelos serviços e
   Microsoft/Bing agora são chamados direto). Não incluídos: Tencent (cota grátis encerrada em 2026-10-01), Papago, Yandex
   Cloud, ModernMT, Systran, Lara, Caiyun (sem plano grátis verificável), Reverso (bloqueio Cloudflare), Amazon Translate
   (assinatura AWS SigV4 + conta paga após 12 meses).
+
+## Scripts
+
+Em **Opções › Scripts** você pode usar **o seu próprio programa de tradução** — uma terceira alternativa aos tradutores e à
+IA. **Só um modo fica ativo**: ao ligar o script, os tradutores e a IA param de ser usados; ao ligar a IA, o script desliga;
+ao desligar o script, os tradutores voltam. Funciona no **canal único** e no **canal duplo**.
+
+> ⚠️ **ATENÇÃO**: use **só scripts que você mesmo criou ou em que confia**. Um script roda no seu PC com as mesmas
+> permissões que você: um script de terceiros pode apagar arquivos, ler seus dados ou enviá-los para a internet. Nunca use
+> scripts baixados sem verificar o que eles fazem.
+
+**Contrato: recebe uma ou duas entradas em string e retorna uma ou duas saídas em string.**
+
+- **Entrada** (stdin, UTF-8): o programa roda o script e escreve um JSON — 1 entrada no canal único, 2 no canal duplo (A, B):
+
+  ```json
+  {"version": 1, "inputs": ["texto do canal A", "texto do canal B"], "source_lang": "en", "target_lang": "pt", "channels": ["a", "b"]}
+  ```
+
+- **Saída** (stdout, UTF-8): um JSON com a mesma quantidade de saídas, na mesma ordem — `{"outputs": ["tradução A", "tradução B"]}`
+  — **ou texto puro**. No canal único todo o texto impresso vira a tradução; no canal duplo separe as duas saídas com uma linha
+  contendo só `---`.
+- **Erro**: devolva `{"error": "mensagem"}` ou saia com código diferente de 0 (a mensagem do stderr aparece no programa).
+- **Limites**: tempo máximo configurável (padrão 15 s; o script é encerrado se passar), saída de até 1 MB.
+- **Tipos**: `.py` (Python), `.js`/`.mjs`/`.cjs` (Node.js), `.ps1` (PowerShell), `.bat`/`.cmd`, `.sh`, `.rb`, `.php`, `.lua`,
+  `.pl` e `.exe` — o programa certo é escolhido pela extensão e precisa estar instalado.
+
+**Camadas de segurança**: ao escolher o arquivo aparece uma confirmação com o caminho completo e a impressão digital
+**SHA-256**; o script só roda depois de você marcar "Eu criei este script ou confio em quem o criou". Se o arquivo mudar, ele
+**não roda** até você confirmar de novo. Ele é executado sem shell (sem interpretar comandos), sem janela, com um ambiente
+limpo (sem o token do programa e sem chaves como `GEMINI_API_KEY`) e com tempo e tamanho de saída limitados. O botão
+**Testar script** roda o script com textos de exemplo (canal único ou duplo) antes de usar no jogo.
+
+**Exemplos prontos** (em [`examples/scripts/`](examples/scripts), comentados em português; também dá para copiar/salvar na aba):
+
+- [`mymemory_tradutor.py`](examples/scripts/mymemory_tradutor.py) — Python, traduz pela API pública do MyMemory usando só a
+  biblioteca padrão (`urllib`); precisa de internet; responde em JSON.
+- [`glossario_offline.js`](examples/scripts/glossario_offline.js) — Node.js, glossário offline (nada sai do PC); responde em
+  texto puro (`---` entre os canais).
+- [`modelo_basico.py`](examples/scripts/modelo_basico.py) — modelo mínimo para começar.
 
 ## Segurança e privacidade
 
@@ -458,6 +510,14 @@ an optional component manager, **20 UI languages** (including Arabic RTL) and 14
     `npm ci && npm run setup:python && npm run dev`; optional AppImage with `npm run dist:linux`. Screen capture needs an
     **X11** session (Wayland usually blocks it). Tested only on Debian 13 / Python 3.13 / X11.
 - **Privacy**: screenshots and OCR stay on your PC; online translators receive only the recognized text (never images).
+- **Translator queue (4.0.9)**: enabled services are tried in order (MyMemory first by default); the first that answers wins
+  and the others are not called. At startup (during the intro) the free services are tested in parallel and the ones that
+  answer are enabled automatically.
+- **Scripts (4.0.9)**: *Options › Scripts* runs your own translation script instead of the translators/AI (only one mode is
+  active). Contract: **receives one or two string inputs and returns one or two string outputs** — JSON on stdin
+  `{"version":1,"inputs":[...],"source_lang":"en","target_lang":"pt","channels":[...]}`, JSON `{"outputs":[...]}` or plain
+  text (`---` line between the two channels) on stdout. ⚠️ Only use scripts you wrote or trust: they run with your
+  permissions. The file is confirmed with its SHA-256 and must be re-confirmed if it changes. Examples in `examples/scripts/`.
   API keys are stored encrypted (Windows DPAPI, bound to your Windows user; on Linux the system keyring or a weaker
   machine-bound AES-GCM fallback) and can be wiped with *Options › AI › Remove key*. Monitor your own Gemini token usage at
   <https://aistudio.google.com>.

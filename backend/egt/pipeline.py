@@ -89,6 +89,8 @@ class Pipeline:
     ocr_provider(engine_id) -> backend com .recognize(img, alphabet) -> OcrResult
     translate_fn(text, src, tgt) -> TranslationResult  (já com glossário/cache/cadeia)
     replace_fn(text) -> text   (regras de substituição do OCR)
+    batch_fn(inputs, src, tgt, channels) -> [TranslationResult]  (modo Scripts: todos os canais numa chamada)
+    batch_active() -> bool     (True = usar batch_fn em vez de translate_fn)
     """
 
     def __init__(self, capture_fn: Callable, ocr_provider: Callable, translate_fn: Callable,
@@ -98,6 +100,8 @@ class Pipeline:
         self.ocr_provider = ocr_provider
         self.translate_fn = translate_fn
         self.replace_fn = replace_fn
+        self.batch_fn: Optional[Callable] = None
+        self.batch_active: Callable[[], bool] = lambda: False
         self._cfg = config or PipelineConfig()
         self._clock = clock
         self.events: "queue.Queue[Event]" = queue.Queue()
@@ -229,6 +233,7 @@ class _Run:
         self._rlock = threading.Lock()
         self.pending_jobs = 0
         self._plock = threading.Lock()
+        self.last_text: dict[str, str] = {}        # último texto enviado de cada canal (modo Scripts, canal duplo)
         self.capture_thread = threading.Thread(target=self._capture_loop, name="egt-capture", daemon=True)
         self.translate_thread = threading.Thread(target=self._translate_loop, name="egt-translate", daemon=True)
         self._fps_t = p._clock()
@@ -451,6 +456,9 @@ class _Run:
             job = self.jobs.get()
             if job is None:
                 break
+            batch_mode = bool(self.p.batch_fn) and self._batch_active()
+            if batch_mode and len(job.cfg.channels) > 1:
+                time.sleep(0.06)          # canal duplo: dá tempo do outro canal chegar e o script roda uma vez só
             # só a tradução mais nova de cada canal importa
             batch = {job.channel: job}
             skipped = 0
@@ -465,12 +473,62 @@ class _Run:
                 if nxt.channel in batch:
                     skipped += 1
                 batch[nxt.channel] = nxt
-            for j in batch.values():
-                self._translate(j)
+            if batch_mode:
+                self._translate_batch(batch)
+            else:
+                for j in batch.values():
+                    self._translate(j)
             with self._plock:
                 self.pending_jobs -= len(batch) + skipped
             if self.stop.is_set() and self.jobs.empty():
                 break
+
+    def _batch_active(self) -> bool:
+        try:
+            return bool(self.p.batch_active())
+        except Exception:  # noqa: BLE001
+            return False
+
+    def _prep(self, job: _Job) -> tuple[str, str]:
+        cfg = job.cfg
+        src_text = smart_join_lines(job.text, alphabet(cfg.alphabet).cjk) if cfg.join_lines else job.text
+        src = detect_source(src_text, cfg.alphabet) if cfg.detect_source else alphabet(cfg.alphabet).hint
+        return src_text, src
+
+    def _translate_batch(self, batch: dict) -> None:
+        """Modo Scripts: UMA chamada com o texto de todos os canais (A e B na ordem da configuração).
+        O canal que não mudou vai com o último texto dele (ou "" se ainda não houve)."""
+        p = self.p
+        first = next(iter(batch.values()))
+        cfg = first.cfg
+        names = list(cfg.channels) or [first.channel]
+        prepped: dict[str, tuple[str, str]] = {}
+        try:
+            for name, job in batch.items():
+                prepped[name] = self._prep(job)
+                self.last_text[name] = prepped[name][0]
+            inputs = [self.last_text.get(n, "") for n in names]
+            src = next((prepped[n][1] for n in names if n in prepped), "")
+            results = p.batch_fn(inputs, src, cfg.target, names)
+        except Exception as exc:
+            log.exception("erro ao traduzir (script)")
+            p._post_error(f"Tradução: {type(exc).__name__}: {exc}", "translate")
+            return
+        if any(j.gen != p._gen for j in batch.values()):
+            return
+        for i, name in enumerate(names):
+            job = batch.get(name)
+            if job is None:
+                continue
+            res = results[i]
+            src = prepped[name][1]
+            if not res.ok:
+                p._post_error(res.error or "falha na tradução", "translate")
+                p._post("translation", name, {"original": job.text, "translated": "", "ok": False, "error": res.error,
+                                              "engine": res.engine, "src": src, "tgt": cfg.target, "cached": False})
+                continue
+            p._post("translation", name, {"original": job.text, "translated": res.text, "ok": True, "engine": res.engine,
+                                          "cached": False, "src": res.src or src, "tgt": cfg.target, "ms": res.elapsed_ms})
 
     def _translate(self, job: _Job) -> None:
         p = self.p

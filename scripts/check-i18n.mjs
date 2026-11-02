@@ -16,7 +16,7 @@ for (const f of files) {
   for (const m of s.matchAll(/['"`]([a-z]+)\.([a-z0-9_.-]+)['"`]/gi)) if (prefixes.has(m[1]) && /^[a-z]+\.[a-z0-9_]+$/.test(m[0].slice(1, -1)) && m[0].slice(1,-1) !== 'main.py') used.add(m[1] + '.' + m[2])
 }
 let bad = 0
-for (const k of [...used].sort()) if (!(k in pt) && /^(ai|banner|box|bug|common|empty|gen|help|hist|hk|intro|main|manual|menu|ocr|rep|status|toast|tr|upd|tab|sel|set|settings)\./.test(k)) { console.log('FALTA em pt-BR:', k); bad++ }
+for (const k of [...used].sort()) if (!(k in pt) && /^(ai|banner|box|bug|common|empty|gen|help|hist|hk|intro|main|manual|menu|ocr|rep|status|toast|tr|upd|tab|sel|set|settings|sc)\./.test(k)) { console.log('FALTA em pt-BR:', k); bad++ }
 for (const k of Object.keys(pt)) if (!(k in en)) { console.log('FALTA em en:', k); bad++ }
 for (const k of Object.keys(en)) if (!(k in pt)) { console.log('FALTA em pt-BR (só em en):', k); bad++ }
 

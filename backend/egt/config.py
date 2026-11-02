@@ -53,9 +53,10 @@ DEFAULTS: dict[str, Any] = {
     },
     "translation": {
         # ordem da cadeia de reserva e motores ligados (catálogo em translate/providers.py)
-        "order": ["google", "bing", "mymemory", "mozhi", "yandex", "apertium", "libre", "deepl", "microsoft",
+        "order": ["mymemory", "google", "bing", "mozhi", "yandex", "apertium", "libre", "deepl", "microsoft",
                   "gcloud", "baidu", "youdao", "niutrans", "argos"],
-        "enabled": ["google", "bing", "mymemory"],
+        "enabled": ["mymemory", "google", "bing"],
+        "autocheck": True,          # 4.0.9: ao abrir, testa os tradutores (texto de exemplo) e liga os que responderem
         "cache_only": False,
         "mymemory_email": "",       # CIFRADO (opcional: aumenta a cota grátis)
         "mozhi_url": "",            # "" = alterna entre as instâncias públicas conhecidas
@@ -82,6 +83,12 @@ DEFAULTS: dict[str, Any] = {
         "ollama_model": "llama3.2",
         "context": "",              # ex.: "RPG medieval; personagens: Nina, Kael"
     },
+    "script": {                      # 4.0.9: modo Scripts — um arquivo do usuário traduz no lugar dos tradutores e da IA
+        "enabled": False,           # ligado = tradutores e IA não são usados (e vice-versa)
+        "path": "",                 # só muda pela confirmação (/api/script/approve), nunca pelo PATCH comum
+        "sha256": "",               # hash aprovado pelo usuário; se o arquivo mudar, pede nova confirmação
+        "timeout": 15.0,            # segundos (1–120)
+    },
     "box": {
         "alpha": 0.92,
         "borderless": False,
@@ -100,6 +107,7 @@ DEFAULTS: dict[str, Any] = {
         "toggle_box": "CommandOrControl+Alt+B",
     },
     "last_profile": "",
+    "migrations": [],               # migrações de uma vez só já aplicadas (ex.: "mymemory_first")
 }
 
 
@@ -151,6 +159,16 @@ def _migrate_translation(tr: dict, raw: dict) -> bool:
     return changed
 
 
+def _mymemory_first(tr: dict) -> bool:
+    """4.0.9: o MyMemory vai para o 1º lugar da fila (é o que mais tem funcionado); o resto da ordem e o que está
+    ligado/desligado continuam como o usuário deixou."""
+    order = tr.get("order")
+    if not isinstance(order, list) or not order or order[0] == "mymemory":
+        return False
+    tr["order"] = ["mymemory"] + [e for e in order if e != "mymemory"]
+    return True
+
+
 def _clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
 
@@ -187,6 +205,14 @@ class Settings:
                 rtr = raw.get("translation") if isinstance(raw.get("translation"), dict) else {}
                 if rtr and _migrate_translation(self.data["translation"], rtr):   # 4.0.8: Lingva → Mozhi etc.
                     dirty = True
+                if "mymemory_first" not in self.data["migrations"]:
+                    _mymemory_first(self.data["translation"])
+                    dirty = True
+                if self.data["script"].get("enabled") and self.data["ai"].get("mode") != "off":
+                    self.data["ai"]["mode"] = "off"          # modos exclusivos: script ligado = IA desligada
+                    dirty = True
+            if "mymemory_first" not in self.data["migrations"]:
+                self.data["migrations"].append("mymemory_first")   # instalação nova já nasce com o MyMemory em 1º
             plain_found = False
             for p in SECRET_PATHS:                   # chave em texto puro (versões antigas) → cifra e apaga o texto puro
                 v = self.get(p)
@@ -289,6 +315,20 @@ class Settings:
             self.data["ui"]["material"] = "auto"
         if self.data["ui"].get("reduce_motion") not in ("system", "on", "off"):
             self.data["ui"]["reduce_motion"] = "system"
+        if not isinstance(self.data.get("migrations"), list):
+            self.data["migrations"] = []
+        self.data["migrations"] = [m for m in self.data["migrations"] if isinstance(m, str)]
+        sc = self.data["script"]
+        sc["enabled"] = bool(sc.get("enabled", False))
+        for k in ("path", "sha256"):
+            if not isinstance(sc.get(k), str):
+                sc[k] = ""
+        try:
+            sc["timeout"] = round(_clamp(float(sc.get("timeout", 15.0)), 1.0, 120.0), 1)
+        except (TypeError, ValueError):
+            sc["timeout"] = 15.0
+        if not isinstance(self.data["translation"].get("autocheck"), bool):
+            self.data["translation"]["autocheck"] = True
         tr = self.data["translation"]
         for lst in ("order", "enabled"):
             v = tr.get(lst)
@@ -373,7 +413,8 @@ SECRET_PATHS = ("translation.mymemory_email", "translation.libre_key", "translat
                 "translation.microsoft_key", "translation.gcloud_key", "translation.baidu_key",
                 "translation.youdao_secret", "translation.niutrans_key", "ai.gemini_key")
 MASK = "••••••••"
-_EDITABLE_SECTIONS = ("ui", "capture", "filters", "ocr", "translation", "ai", "box", "hotkeys")
+_EDITABLE_SECTIONS = ("ui", "capture", "filters", "ocr", "translation", "ai", "box", "hotkeys", "script")
+_LOCKED_PATHS = frozenset({"script.path", "script.sha256"})     # só pela confirmação do arquivo
 
 
 def _leaf_paths(d: dict, prefix: str = "") -> list[str]:
@@ -387,7 +428,7 @@ def _leaf_paths(d: dict, prefix: str = "") -> list[str]:
     return out
 
 
-EDITABLE_PATHS = frozenset(p for p in _leaf_paths(DEFAULTS) if p.split(".")[0] in _EDITABLE_SECTIONS)
+EDITABLE_PATHS = frozenset(p for p in _leaf_paths(DEFAULTS) if p.split(".")[0] in _EDITABLE_SECTIONS) - _LOCKED_PATHS
 
 
 def public_view(settings: "Settings") -> dict:
@@ -432,6 +473,13 @@ def apply_changes(settings: "Settings", changes: dict[str, Any]) -> list[str]:
             raise ValueError(f"{path}: esperado lista")
         settings.set(path, value, save=False)
         changed.append(path)
+    # modos exclusivos: Script ↔ Tradutores/IA (ligar um desliga o outro)
+    if changes.get("script.enabled") is True and settings.get("ai.mode", "off") != "off":
+        settings.set("ai.mode", "off", save=False)
+        changed.append("ai.mode")
+    elif changes.get("ai.mode") not in (None, "off") and settings.get("script.enabled", False):
+        settings.set("script.enabled", False, save=False)
+        changed.append("script.enabled")
     if changed:
         settings.save()
     for path, value in secrets_changed:

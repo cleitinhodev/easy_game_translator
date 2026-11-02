@@ -26,7 +26,17 @@ export interface TrMeta {
   fields: TrField[]; site: string; key_url: string; docs: string; howto: string; note: string; default_on: boolean
   key_state?: Record<string, 'none' | 'ok' | 'unreadable'>
 }
-export interface TrEngine { id: string; name: string; online: boolean; available: boolean; detail: string; enabled: boolean; cooldown: number; error: string; code?: string; last_ok?: number; meta?: TrMeta }
+export interface TrProbe { ok: boolean; code: string; ms: number; at: number; source: 'auto' | 'manual' }
+export interface TrEngine { id: string; name: string; online: boolean; available: boolean; detail: string; enabled: boolean; cooldown: number; error: string; code?: string; last_ok?: number; meta?: TrMeta; probe?: TrProbe | null }
+/** verificação automática dos tradutores ao abrir o app (4.0.9) */
+export interface AutoCheck { state: 'idle' | 'running' | 'done' | 'skipped' | 'error'; reason?: string; done: number; total: number; passed: string[]; failed: string[]; activated: string[]; running: string[] }
+/** modo Scripts (4.0.9): script de tradução do próprio usuário */
+export interface ScriptInfo {
+  enabled: boolean; path: string; name: string; sha256: string; exists: boolean; timeout: number; runs: number; last_ok: number
+  error: string; error_detail: string; current_sha256: string; changed: boolean; size?: number
+  runtime?: string; runtime_found?: boolean; runtime_path?: string; runtime_error?: string
+}
+export interface ScriptInspect { ok: boolean; path: string; name: string; size: number; sha256: string; runtime: string; runtime_found: boolean; runtime_path?: string; runtime_error?: string; code?: string; detail?: string; message?: string }
 export interface TrTest { engine: string; ok: boolean; text: string; code: string; message: string; ms: number; instance?: string }
 export interface Alphabet { key: string; title: string; tesseract: string; cjk: boolean }
 export interface Language { code: string; name: string }
@@ -54,12 +64,13 @@ export interface Settings {
   filters: { stable_ms: number; max_wait_ms: number; min_chars: number; min_alnum_ratio: number; min_confidence: number; diff_mean: number; similarity: number }
   ocr: { engine: string; tesseract_path: string; tesseract_psm: number; easyocr_gpu: boolean }
   translation: {
-    order: string[]; enabled: string[]; cache_only: boolean; timeout: number
+    order: string[]; enabled: string[]; cache_only: boolean; timeout: number; autocheck: boolean
     mymemory_email: string; mozhi_url: string; mozhi_engine: string; apertium_url: string; libre_url: string; libre_key: string
     deepl_key: string; microsoft_key: string; microsoft_region: string; gcloud_key: string; baidu_appid: string; baidu_key: string
     youdao_appkey: string; youdao_secret: string; niutrans_key: string
     [k: string]: string | string[] | boolean | number
   }
+  script: { enabled: boolean; path: string; sha256: string; timeout: number }
   ai: { mode: 'off' | 'gemini' | 'ollama'; gemini_key: string; gemini_model: string; ollama_url: string; ollama_model: string; context: string; env_key_found: boolean; env_key_names?: string[] }
   secrets?: { state: Record<string, 'none' | 'ok' | 'unreadable'>; scheme: string }
   box: { alpha: number; borderless: boolean; click_through: boolean; auto_font: boolean; font_size: number; text_color: string; bg_color: string; show_original: boolean; exclude_from_capture: boolean }
@@ -79,6 +90,8 @@ export interface Snapshot {
   monitors: Monitor[]
   engines: TrEngine[]
   metrics: Metrics
+  autocheck?: AutoCheck
+  script?: ScriptInfo
 }
 
 export interface ChannelView {

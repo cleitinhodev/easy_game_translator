@@ -1,5 +1,5 @@
 'use strict'
-// Aba Tradução (4.0.8): um cartão por serviço (status, selos, privacidade, limite, campos, "como conseguir a chave", teste manual),
+// Aba Tradução (4.0.8; ordem 4.0.9 com MyMemory primeiro — rode com EGT_NO_AUTOCHECK=1): um cartão por serviço (status, selos, privacidade, limite, campos, "como conseguir a chave", teste manual),
 // chaves criptografadas/mascaradas/removíveis, ordem/ligar, árabe RTL e japonês. Testes manuais vão ao serviço real (só o texto de exemplo).
 const fs = require('node:fs'); const path = require('node:path')
 const OUT = process.env.EGT_SHOTS || 'screenshots'
@@ -13,7 +13,7 @@ const grepDir = (dir, needle) => {
     for (const e of ents) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else { try { const b = fs.readFileSync(p); if (b.includes(needle) || b.includes(Buffer.from(needle, 'utf16le'))) hits.push(p) } catch { /* */ } } } }
   walk(dir); return hits
 }
-const EXPECT = ['google', 'bing', 'mymemory', 'mozhi', 'yandex', 'apertium', 'libre', 'deepl', 'microsoft', 'gcloud', 'baidu', 'youdao', 'niutrans', 'argos']
+const EXPECT = ['mymemory', 'google', 'bing', 'mozhi', 'yandex', 'apertium', 'libre', 'deepl', 'microsoft', 'gcloud', 'baidu', 'youdao', 'niutrans', 'argos']
 module.exports = async ({ app, getMain, backend }) => {
   const main = getMain(); const wc = main.webContents
   const js = (c) => wc.executeJavaScript(c, true)
@@ -39,7 +39,7 @@ module.exports = async ({ app, getMain, backend }) => {
     ok('cards:order', JSON.stringify(ids) === JSON.stringify(EXPECT), ids)
     ok('cards:no-lingva', !ids.includes('lingva') && !(await js(`document.body.innerText.includes('Lingva URL')`)))
     const on = await js(`[...document.querySelectorAll('[data-testid^=tr-card-]')].filter(c => c.querySelector('.switch')?.getAttribute('aria-checked') === 'true').map(c => c.dataset.testid.slice(8))`)
-    ok('cards:default-enabled', JSON.stringify(on) === JSON.stringify(['google', 'bing', 'mymemory']), on)
+    ok('cards:default-enabled', JSON.stringify(on) === JSON.stringify(['mymemory', 'google', 'bing']), on)
     const unof = await js(`[...document.querySelectorAll('[data-testid^=tr-card-]')].filter(c => /Não oficial/.test(c.querySelector('.tr-tags')?.innerText || '')).map(c => c.dataset.testid.slice(8))`)
     ok('cards:unofficial-badges', JSON.stringify(unof) === JSON.stringify(['google', 'bing', 'yandex']), unof)
     ok('cards:no-auto-probe', await js(`!document.body.innerText.includes('testando…')`))

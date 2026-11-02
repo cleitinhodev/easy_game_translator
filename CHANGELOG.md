@@ -2,6 +2,34 @@
 
 Todas as mudanças das versões 4.x. Datas no formato AAAA-MM-DD.
 
+## 4.0.9 — 2026-11-02
+
+- **Verificação automática dos tradutores na abertura**: durante a intro ("Verificando tradutores… 2/6") os tradutores grátis
+  — e os com chave salva, e LibreTranslate/Argos só se configurados — são testados **em paralelo** com uma frase curta e tempo
+  limite curto. Os que responderem são **ligados sozinhos** e o cartão mostra **online** (ou o motivo da falha); nenhum é
+  desligado. Linha de resultado e botão **Verificar agora** em Opções › Tradução; opção **Verificar tradutores ao abrir**
+  (ligada por padrão). Não roda em modo Scripts nem em modo somente cache.
+- **Continua em fila**: o primeiro tradutor ligado que responder entrega a tradução e os seguintes não são chamados; se ele
+  falhar, o próximo assume (e o que falhou espera antes de ser tentado de novo).
+- **MyMemory em 1º lugar** na ordem padrão (MyMemory, Google, Bing, Mozhi, Yandex, Apertium…). Migração única: quem atualiza
+  tem o MyMemory movido para o topo sem perder o que ligou/desligou; se reordenar depois, a sua ordem é respeitada.
+- **Nova aba Scripts** (Opções › Scripts): use o **seu próprio script de tradução** no lugar dos tradutores ou da IA — só um
+  modo fica ativo por vez. Contrato: **recebe uma ou duas entradas em string e retorna uma ou duas saídas em string** (JSON
+  no stdin; JSON `{"outputs": [...]}` ou texto puro no stdout, `---` entre os canais). Canal único e duplo (no duplo o script
+  recebe A e B numa chamada só). Qualquer tipo de arquivo: .py, .js, .ps1, .bat/.cmd, .sh, .rb, .php, .lua, .pl, .exe.
+  - **Aviso** bem visível para usar só scripts próprios ou confiáveis.
+  - **Segurança leve**: confirmação com caminho e **SHA-256**, nova confirmação obrigatória se o arquivo mudar, execução sem
+    shell e sem janela, ambiente limpo (sem token do programa nem chaves), tempo limite (padrão 15 s, 1–120 s) com
+    encerramento do processo, saída limitada a 1 MB, UTF-8.
+  - **Testar script** (canal único/duplo), erros explicados em linguagem simples, contrato descrito na tela e **exemplos**
+    para ver, copiar ou salvar.
+- **Exemplos** em `examples/scripts/` (comentados em pt-BR): `mymemory_tradutor.py` (Python, API do MyMemory só com
+  `urllib`), `glossario_offline.js` (Node.js, glossário offline, texto puro) e `modelo_basico.py` (modelo mínimo).
+- Banners nas abas Tradução e IA quando o modo Scripts está ligado; o painel da direita mostra "Script" como motor.
+- 98 textos novos traduzidos nos 20 idiomas. Novos endpoints (com token): `/api/script` (+ `inspect`, `approve`, `forget`,
+  `test`) e `/api/translation/autocheck`. Testes: 24 novos testes do backend (fila, verificação automática, scripts: único/
+  duplo, JSON/texto, tempo limite, erro, hash alterado, ambiente) e E2E da aba Scripts (42 checagens).
+
 ## 4.0.8 — 2026-10-31
 
 - **Tradutores refeitos** (Opções › Tradução). Investigação: o *deep-translator* era bloqueado/limitado pelos serviços, todas as

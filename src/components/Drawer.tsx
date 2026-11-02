@@ -8,9 +8,10 @@ import { GeneralTab } from '@/settings/General'
 import { HistoryTab } from '@/settings/History'
 import { OcrTab } from '@/settings/Ocr'
 import { ReplaceTab } from '@/settings/Replace'
+import { ScriptsTab } from '@/settings/Scripts'
 import { TranslationTab } from '@/settings/Translation'
 import { useStore, useT, type TabId } from '@/store'
-import { IBug, IDownloadCloud, IHistory, ISliders, ILanguages, IReplace, IScan, ISparkles, IX } from './icons'
+import { IBug, ICode, IDownloadCloud, IHistory, ISliders, ILanguages, IReplace, IScan, ISparkles, IX } from './icons'
 import { useFocusTrap } from './ui'
 
 const TABS: { id: TabId; icon: ReactNode; Comp: () => ReactNode }[] = [
@@ -19,6 +20,7 @@ const TABS: { id: TabId; icon: ReactNode; Comp: () => ReactNode }[] = [
   { id: 'translation', icon: <ILanguages size={17} />, Comp: TranslationTab },
   { id: 'replace', icon: <IReplace size={17} />, Comp: ReplaceTab },
   { id: 'ai', icon: <ISparkles size={17} />, Comp: AiTab },
+  { id: 'scripts', icon: <ICode size={17} />, Comp: ScriptsTab },
   { id: 'history', icon: <IHistory size={17} />, Comp: HistoryTab },
   { id: 'updates', icon: <IDownloadCloud size={17} />, Comp: UpdatesTab },
   { id: 'bugs', icon: <IBug size={17} />, Comp: BugsTab },

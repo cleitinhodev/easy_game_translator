@@ -95,11 +95,34 @@ export function TranslationTab() {
     loadCache()
   }
   const on = engines.filter((e) => e.enabled).length
+  const ac = useStore((st) => st.autocheck)
+  const scriptOn = !!s.script?.enabled
+  const openDrawer = useStore((st) => st.openDrawer)
+  const recheck = async () => {
+    useStore.setState({ autocheck: { state: 'running', done: 0, total: 0, passed: [], failed: [], activated: [], running: [] } })
+    try { await api.post('/api/translation/autocheck') } catch { /* WS informa */ }
+  }
+  const nameOf = (id: string) => engines.find((e) => e.id === id)?.name ?? id
   return (
     <div className="s-page">
+      {scriptOn && (
+        <div className="sc-banner" role="status" data-testid="tr-script-banner">
+          <p>{t('sc.banner_tr')}</p>
+          <Button size="sm" onClick={() => openDrawer('scripts')}>{t('sc.open')}</Button>
+        </div>
+      )}
       <Section title={t('tr.engines')} desc={t('tr.engines_tip')}
         right={<Button size="sm" onClick={testAll} disabled={!on || Object.values(results).includes('busy')} data-testid="tr-test-all">{t('tr.test_all')}</Button>}>
         <p className="muted small tr-keys-note">{t('tr.keys_note', { path: s.config_path })}</p>
+        <p className="muted small">{t('tr.queue_note')}</p>
+        <div className="ac-line" data-testid="tr-autocheck">
+          {ac?.state === 'running'
+            ? <Chip tone="accent"><span className="spinner" />{t('tr.ac_running', { done: ac.done, total: ac.total || '…' })}</Chip>
+            : ac?.state === 'done'
+              ? <span>{t('tr.ac_done', { ok: ac.passed.length, total: ac.total })}{ac.activated.length ? ` · ${t('tr.ac_activated', { list: ac.activated.map(nameOf).join(', ') })}` : ''}</span>
+              : ac?.state === 'skipped' ? <span>{t(`tr.ac_skip.${ac.reason === 'script' || ac.reason === 'cache_only' ? ac.reason : 'disabled'}`)}</span> : null}
+          <Button size="sm" variant="ghost" onClick={recheck} disabled={ac?.state === 'running' || scriptOn} data-testid="tr-autocheck-run">{t('tr.ac_run')}</Button>
+        </div>
         <div className="eng-list" data-testid="tr-cards">
           <AnimatePresence initial={false}>
             {engines.map((e, i) => (
@@ -111,6 +134,7 @@ export function TranslationTab() {
             ))}
           </AnimatePresence>
         </div>
+        <Row label={t('tr.ac_toggle')} hint={t('tr.ac_toggle_tip')}><Switch checked={tr.autocheck !== false} label={t('tr.ac_toggle')} onChange={(v) => patch({ 'translation.autocheck': v })} /></Row>
         <Row label={t('tr.cache_only')} hint={t('tr.cache_only_tip')}><Switch checked={tr.cache_only} label={t('tr.cache_only')} onChange={(v) => patch({ 'translation.cache_only': v })} /></Row>
       </Section>
 
@@ -125,7 +149,7 @@ export function TranslationTab() {
   )
 }
 
-function statusChip(t: T, e: TrEngine, cooldown: number, res: TrTest | 'busy' | undefined) {
+function statusChip(t: T, e: TrEngine, cooldown: number, res: TrTest | 'busy' | undefined, running = false) {
   if (res === 'busy') return <Chip tone="accent"><span className="spinner" />{t('tr.status.testing')}</Chip>
   if (cooldown > 0) return <Chip tone="warn" title={e.error ? errText(t, e.code) : undefined}>{t('tr.cooldown', { s: Math.ceil(cooldown) })}</Chip>
   if (!e.available) {
@@ -134,7 +158,10 @@ function statusChip(t: T, e: TrEngine, cooldown: number, res: TrTest | 'busy' | 
   }
   if (res && !res.ok) return <Chip tone="err" title={errText(t, res.code)}>{t('tr.status.offline')}</Chip>
   if (res?.ok || (e.last_ok ?? 0) > 0) return <Chip tone="ok"><i className="dot-s ok" />{t('tr.status.online')}</Chip>
+  if (!res && e.probe?.ok) return <Chip tone="ok" title={t(e.probe.source === 'auto' ? 'tr.probe_auto' : 'tr.probe_manual', { ms: e.probe.ms })}><i className="dot-s ok" />{t('tr.status.online')}</Chip>
+  if (!res && e.probe && !e.probe.ok) return <Chip tone="err" title={errText(t, e.probe.code)}>{t('tr.status.offline')}</Chip>
   if (e.code) return <Chip tone="err" title={errText(t, e.code)}>{t('tr.status.error')}</Chip>
+  if (running) return <Chip tone="accent"><span className="spinner" />{t('tr.status.testing')}</Chip>
   return <Chip>{t('tr.status.untested')}</Chip>
 }
 
@@ -145,6 +172,7 @@ function ProviderCard({ e, index, last, open, onOpen, onMove, onToggle, result, 
   const t = useT()
   const fmt = useFormat()
   const m = e.meta
+  const acRunning = useStore((st) => st.autocheck?.state === 'running' && st.autocheck.running.includes(e.id))
   const icon = m?.kind === 'offline' ? <IMonitor size={16} /> : m?.kind === 'key' ? <IKey size={16} /> : e.online ? <IGlobe size={16} /> : <IWifiOff size={16} />
   const bodyId = `tr-body-${e.id}`
   return (
@@ -156,7 +184,7 @@ function ProviderCard({ e, index, last, open, onOpen, onMove, onToggle, result, 
           <strong>{e.name}</strong>
           <span className="tr-tags">{m && kindChip(t, m)}{m && !m.official && <Chip tone="warn">{t('tr.unofficial')}</Chip>}</span>
         </button>
-        {statusChip(t, e, cooldown, result)}
+        {statusChip(t, e, cooldown, result, acRunning)}
         <button type="button" className="mini-btn" aria-label={t('tr.up')} disabled={index === 0} onClick={() => onMove(-1)}><IUp size={15} /></button>
         <button type="button" className="mini-btn" aria-label={t('tr.down')} disabled={last} onClick={() => onMove(1)}><IDown size={15} /></button>
         <Switch checked={e.enabled} label={e.name} onChange={onToggle} />

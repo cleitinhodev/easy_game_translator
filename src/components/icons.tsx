@@ -62,4 +62,5 @@ export const ISave = mk(<><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v5h7V4M8 20
 export const IMousePointer = mk(<path d="M5 4l14 6-6 2-2 6z" />)
 export const IEye = mk(<><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>)
 export const IKeyboard = mk(<><rect x="2" y="6" width="20" height="12" rx="2.5" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></>)
+export const ICode = mk(<><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" /></>)
 export const IUndo = mk(<><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></>)

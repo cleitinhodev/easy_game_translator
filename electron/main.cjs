@@ -340,6 +340,7 @@ function registerIpc() {
     return r.canceled ? null : r.filePaths[0]
   })
   handle('app:pick-file', async (e, opts) => {
+    if (IS_E2E && global.__egtPickFile !== undefined) { (global.__egtComponentCalls ||= []).push({ fn: 'pick-file', path: global.__egtPickFile }); return global.__egtPickFile }   // só E2E sem empacotar
     const win = BrowserWindow.fromWebContents(e.sender)
     const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: opts?.filters })
     return r.canceled ? null : r.filePaths[0]

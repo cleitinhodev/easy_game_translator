@@ -49,14 +49,14 @@ def _f(key, kind, label, placeholder="", options=()):
 
 
 PROVIDERS: tuple[Provider, ...] = (
-    Provider("google", "Google Translate", "free", False, "Google", "US", ("fair", 0),
-             site="https://translate.google.com", default_on=True),
-    Provider("bing", "Bing Translator", "free", False, "Microsoft (Bing)", "US", ("fair", 0),
-             site="https://www.bing.com/translator", default_on=True),
     Provider("mymemory", "MyMemory", "free", True, "Translated (MyMemory)", "IT", ("day", 5000),
              fields=(_f("mymemory_email", "email", "tr.f.email", "email@example.com"),),
              site="https://mymemory.translated.net", docs="https://mymemory.translated.net/doc/spec.php",
              note="tr.note.mymemory", default_on=True),
+    Provider("google", "Google Translate", "free", False, "Google", "US", ("fair", 0),
+             site="https://translate.google.com", default_on=True),
+    Provider("bing", "Bing Translator", "free", False, "Microsoft (Bing)", "US", ("fair", 0),
+             site="https://www.bing.com/translator", default_on=True),
     Provider("mozhi", "Mozhi", "free", True, "Mozhi", "", ("fair", 0),
              fields=(_f("mozhi_engine", "select", "tr.f.engine", "", ("duckduckgo", "yandex", "google")),
                      _f("mozhi_url", "url", "tr.f.instance", "tr.f.auto_instance")),
@@ -109,7 +109,7 @@ DEFAULT_ENABLED = [p.id for p in PROVIDERS if p.default_on]
 REMOVED = {"lingva": "mozhi"}       # motores removidos → substituto (migração das configurações)
 
 
-def factories(settings) -> dict[str, Callable]:
+def factories(settings, timeout: float | None = None) -> dict[str, Callable]:
     """{id: fábrica} — nada de rede aqui; as chaves são lidas (decifradas) só quando o motor é criado."""
     from .apertium import ApertiumTranslate
     from .argos import ArgosTranslate
@@ -129,9 +129,9 @@ def factories(settings) -> dict[str, Callable]:
     from .yandex import YandexTranslate
 
     tr = settings.section("translation")
-    to = float(tr.get("timeout", 8.0))
+    to = float(timeout if timeout else tr.get("timeout", 8.0))
     sec = settings.secret
-    return {
+    f = {
         "google": lambda: GoogleTranslate(to),
         "bing": lambda: BingTranslate(to),
         "mymemory": lambda: MyMemoryTranslate(to, sec("translation.mymemory_email")),
@@ -147,6 +147,7 @@ def factories(settings) -> dict[str, Callable]:
         "niutrans": lambda: NiuTransTranslate(sec("translation.niutrans_key"), to),
         "argos": lambda: ArgosTranslate(),
     }
+    return {p.id: f[p.id] for p in PROVIDERS}          # mesma ordem do catálogo (MyMemory primeiro)
 
 
 def secret_paths() -> tuple[str, ...]:

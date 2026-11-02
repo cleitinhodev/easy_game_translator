@@ -44,7 +44,7 @@ function Pane({ kind, ch, compact }: { kind: 'original' | 'translation'; ch: Cha
           <AnimatePresence initial={false} mode="popLayout">
             {isTr && v.rev > 0 && v.engine && (
               <motion.span key={`${v.rev}-e`} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <Chip tone={v.cached ? 'accent' : 'default'} title={v.cached ? t('main.from_cache') : v.engine}>{v.cached ? <><IZap size={11} /> {t('main.cache')}</> : v.engine}{v.ms ? ` · ${Math.round(v.ms)} ms` : ''}</Chip>
+                <Chip tone={v.cached ? 'accent' : 'default'} title={v.cached ? t('main.from_cache') : v.engine}>{v.cached ? <><IZap size={11} /> {t('main.cache')}</> : v.engine === 'script' ? t('sc.engine') : v.engine}{v.ms ? ` · ${Math.round(v.ms)} ms` : ''}</Chip>
               </motion.span>
             )}
             {!isTr && v.confidence != null && v.orev > 0 && (
