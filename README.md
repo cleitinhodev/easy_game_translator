@@ -8,11 +8,26 @@ Funciona **offline** depois de instalado (OCR local, cache de traduções e moto
 
 ![Janela principal traduzindo](docs/screenshots/translating.png)
 
-**Índice:** [Iniciantes (passo a passo)](#iniciantes) · [Recursos](#recursos) · [Download](#download-e-instalação) ·
-[Como usar](#como-usar) · [Scripts](#scripts) · [Perguntas frequentes](#perguntas-frequentes) · [Compilar](#compilar-a-partir-do-código) ·
-[Licença](#licença) · [English](#english-summary)
+> ✅ **Versão segura (estável) atual: [4.0.9](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9)** — branch [`stable-4.0.9`](https://github.com/cleitinhodev/easy_game_translator/tree/stable-4.0.9).
+> A anterior, [4.0.6](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.6), continua disponível (branch `stable-4.0.6`).
+> Veja a [política de versão estável](#versão-estável-versão-segura).
+>
+> 📖 **Tutorial online com imagens:** <https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/>
+
+**Índice:** [O que é](#o-que-é) · [Download](#download-e-instalação) · [Iniciantes: Windows](#windows) · [Iniciantes: Linux](#linux) ·
+[Primeiro uso](#primeiro-uso) · [Tradutores](#tradutores) · [IA](#ia-opcional) · [Scripts](#scripts) ·
+[Segurança e privacidade](#segurança-e-privacidade) · [Versão estável](#versão-estável-versão-segura) ·
+[Perguntas frequentes](#perguntas-frequentes) · [Compilar](#compilar-a-partir-do-código) · [Licença](#licença) · [English](#english-summary)
 
 > 🇺🇸 [English summary below](#english-summary)
+
+## O que é
+
+O **Easy Game Translator** é um programa gratuito e de código aberto (GPL-3.0) para **traduzir jogos enquanto você joga**.
+Você marca na tela o lugar onde aparece o texto do jogo (legenda, caixa de diálogo, chat); o programa **lê esse texto com OCR**
+(reconhecimento de texto em imagem, feito no seu próprio PC) e mostra a **tradução na hora** — na janela principal ou numa
+janelinha transparente por cima do jogo (**Box Mode**). Serve para jogos sem tradução para o seu idioma, visual novels,
+RPGs antigos, chats de jogos online etc. Não mexe nos arquivos do jogo e não injeta nada nele: só olha a tela.
 
 ## Recursos
 
@@ -42,14 +57,22 @@ Funciona **offline** depois de instalado (OCR local, cache de traduções e moto
 
 ## Download e instalação
 
-Baixe a versão mais recente em **[Releases](../../releases/latest)**:
+**Versão atual (estável): [Easy Game Translator 4.0.9](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9)** — baixe só um arquivo, o do seu sistema:
 
-- `EasyGameTranslator-<versão>-setup.exe` — instalador (Windows 10/11 x64; permite escolher a pasta);
-- `EasyGameTranslator-<versão>-portable.exe` — versão portátil, sem instalar.
-- `EasyGameTranslator-<versão>-x86_64.AppImage` — Linux (x86_64), sem instalar — veja [Linux](#linux);
-- `EasyGameTranslator-<versão>-amd64.deb` — Linux Debian/Ubuntu (instalador).
+| Sistema | Arquivo | Para quem |
+|---|---|---|
+| Windows 10/11 (64 bits) | [`EasyGameTranslator-4.0.9-setup.exe`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/EasyGameTranslator-4.0.9-setup.exe) | **Instalador** — o mais indicado: cria atalhos e permite escolher a pasta |
+| Windows 10/11 (64 bits) | [`EasyGameTranslator-4.0.9-portable.exe`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/EasyGameTranslator-4.0.9-portable.exe) | **Portátil** — não instala nada, é só abrir (bom para pendrive ou PC sem permissão de instalar) |
+| Linux x86_64 (qualquer distro, glibc 2.28+) | [`EasyGameTranslator-4.0.9-x86_64.AppImage`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/EasyGameTranslator-4.0.9-x86_64.AppImage) | Sem instalar — veja [Linux](#linux) |
+| Ubuntu / Debian / Mint / Pop!_OS | [`EasyGameTranslator-4.0.9-amd64.deb`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/EasyGameTranslator-4.0.9-amd64.deb) | Instalador `.deb` (aparece no menu de aplicativos) |
+| Todos | [`SHA256SUMS.txt`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/SHA256SUMS.txt) | Impressões digitais SHA-256 para conferir o download |
+| Scripts de exemplo | [`mymemory_tradutor.py`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/mymemory_tradutor.py) · [`glossario_offline.js`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/glossario_offline.js) · [`modelo_basico.py`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/modelo_basico.py) | Veja [Scripts](#scripts) |
 
-Confira o SHA-256 com `SHA256SUMS.txt` (PowerShell: `Get-FileHash .\arquivo.exe`).
+Página da versão (notas e todos os arquivos): <https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9> · Todas as versões: [Releases](../../releases).
+
+**Conferir o download (opcional, recomendado):** compare o resultado com o `SHA256SUMS.txt`.
+- Windows (PowerShell): `Get-FileHash .\EasyGameTranslator-4.0.9-setup.exe -Algorithm SHA256`
+- Linux: `sha256sum -c SHA256SUMS.txt --ignore-missing`
 
 > **Aviso do SmartScreen**: o executável **não é assinado** digitalmente, então o Windows pode mostrar
 > "O Windows protegeu o computador". Clique em **Mais informações → Executar assim mesmo**.
@@ -62,9 +85,12 @@ Guia passo a passo, em linguagem simples. Escolha o seu sistema: **[Windows](#wi
 
 Funciona no **Windows 10 ou 11 (64 bits)**. **Não precisa instalar Python** nem mais nada para começar.
 
-1. **Baixe** em [Releases](../../releases/latest) um destes arquivos:
-   - `EasyGameTranslator-<versão>-setup.exe` → instala no computador (cria atalho na Área de Trabalho e no Menu Iniciar);
-   - `EasyGameTranslator-<versão>-portable.exe` → não instala nada, é só abrir (bom para pendrive).
+1. **Baixe** um destes arquivos (veja a [tabela de downloads](#download-e-instalação)):
+   - [`EasyGameTranslator-4.0.9-setup.exe`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/EasyGameTranslator-4.0.9-setup.exe) → **instalador**: instala no computador
+     (cria atalho na Área de Trabalho e no Menu Iniciar, aparece em "Aplicativos instalados" para desinstalar). Recomendado.
+   - [`EasyGameTranslator-4.0.9-portable.exe`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/EasyGameTranslator-4.0.9-portable.exe) → **portátil**: não instala nada,
+     é só abrir (bom para pendrive). Demora um pouco mais para abrir, porque se descompacta a cada vez.
+   - Na dúvida, use o **setup**. Os dois têm as mesmas funções e guardam as configurações no mesmo lugar.
 2. **Abra o arquivo baixado.** Se aparecer a tela azul **"O Windows protegeu o computador"** (SmartScreen), clique em
    **Mais informações** e depois em **Executar assim mesmo**. Isso acontece porque o programa não tem assinatura digital paga —
    não quer dizer que tem vírus.
@@ -102,21 +128,52 @@ Nada disso é obrigatório.
 
 ### Linux
 
-**Jeito fácil — AppImage pronto (a partir da 4.0.6):** baixe `EasyGameTranslator-<versão>-x86_64.AppImage` em
-[Releases](../../releases/latest). **Não precisa instalar Python** — o motor e o RapidOCR já vêm dentro.
+**Jeito fácil — programa pronto.** **Não precisa instalar Python** — o motor e o RapidOCR já vêm dentro.
+Precisa de uma distro de 64 bits (x86_64) com glibc 2.28 ou mais nova (Ubuntu 20.04+, Debian 10+, Fedora 29+, Mint 20+…).
 
-```bash
-chmod +x EasyGameTranslator-*-x86_64.AppImage
-./EasyGameTranslator-*-x86_64.AppImage
-```
+> **Antes de tudo — use uma sessão X11 (Xorg), não Wayland.** A captura de tela do programa usa o X11; no **Wayland** o sistema
+> normalmente bloqueia a captura de outros programas e o OCR lê uma imagem preta. Para conferir: `echo $XDG_SESSION_TYPE`
+> (deve mostrar `x11`). Para trocar: saia da sessão e, na tela de login, clique na engrenagem ⚙ e escolha **"Ubuntu on Xorg"**
+> (ou "GNOME on Xorg", "Plasma (X11)" etc.).
+
+**Opção A — AppImage (qualquer distro, sem instalar):**
+
+1. Baixe [`EasyGameTranslator-4.0.9-x86_64.AppImage`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/EasyGameTranslator-4.0.9-x86_64.AppImage).
+2. Dê permissão de execução — no terminal, na pasta do download:
+
+   ```bash
+   cd ~/Downloads
+   chmod +x EasyGameTranslator-4.0.9-x86_64.AppImage
+   ./EasyGameTranslator-4.0.9-x86_64.AppImage
+   ```
+
+   (Ou pelo gerenciador de arquivos: botão direito → Propriedades → Permissões → marque **"Permitir executar como programa"**,
+   depois clique duas vezes.)
+3. Se aparecer **"AppImages require FUSE to run"**, instale o FUSE 2:
+   - Ubuntu 22.04 / Mint 21 / Debian 12: `sudo apt install libfuse2`
+   - Ubuntu 24.04+ / Debian 13: `sudo apt install libfuse2t64`
+   - Fedora: `sudo dnf install fuse-libs` · Arch: `sudo pacman -S fuse2`
+   - Ou rode sem FUSE: `./EasyGameTranslator-4.0.9-x86_64.AppImage --appimage-extract-and-run`
+
+**Opção B — pacote .deb (Ubuntu, Debian, Mint, Pop!_OS):**
+
+1. Baixe [`EasyGameTranslator-4.0.9-amd64.deb`](https://github.com/cleitinhodev/easy_game_translator/releases/download/v4.0.9/EasyGameTranslator-4.0.9-amd64.deb).
+2. Instale pelo terminal, na pasta do download (o `./` na frente do nome é obrigatório):
+
+   ```bash
+   cd ~/Downloads
+   sudo apt install ./EasyGameTranslator-4.0.9-amd64.deb
+   ```
+
+3. Abra pelo menu de aplicativos: **"Easy Game Translator"**. Para desinstalar: `sudo apt remove easy-game-translator`.
+
+Depois de abrir, siga o [Primeiro uso](#primeiro-uso) — é igual ao Windows.
 
 - Se aparecer "AppImages require FUSE to run": Ubuntu 22.04 → `sudo apt install libfuse2`; Ubuntu 24.04+ / Debian 13 →
   `sudo apt install libfuse2t64` — ou rode com `./EasyGameTranslator-*.AppImage --appimage-extract-and-run`.
 - Se fechar na hora com erro de *sandbox* (comum no Ubuntu 24.04+), prefira o `.deb` (abaixo), que instala o perfil do AppArmor.
   Último recurso: `--no-sandbox` (desliga uma proteção do Chromium; use só se precisar).
-- **Debian/Ubuntu (instalador):** `sudo apt install ./EasyGameTranslator-<versão>-amd64.deb` → abra pelo menu ("Easy Game Translator").
 - Tesseract é **opcional**: `sudo apt install tesseract-ocr tesseract-ocr-por` (Fedora: `tesseract`, Arch: `tesseract`).
-- Precisa de uma distro de 64 bits razoavelmente recente (glibc 2.28+: Ubuntu 20.04+, Debian 10+, Fedora 29+) e de uma sessão **X11** (veja abaixo).
 - Confira o SHA-256 com `sha256sum -c SHA256SUMS.txt --ignore-missing`.
 
 **A partir do código** (para quem quer mexer no programa): precisa de **Python**.
@@ -154,14 +211,15 @@ sudo pacman -S --needed tesseract tesseract-data-eng tesseract-data-por       # 
 instale pelo **nvm** (<https://github.com/nvm-sh/nvm#installing-and-updating>) e rode `nvm install 22`, ou pelos pacotes
 oficiais da NodeSource (<https://github.com/nodesource/distributions>). Página oficial: <https://nodejs.org/en/download>.
 
-**2. Baixe o código.** O repositório é **privado**: você precisa ter acesso a ele (ou receber o `.zip` do código-fonte).
+**2. Baixe o código** (o repositório é público; também dá para baixar o `.zip` do código-fonte na página da versão).
 
 ```bash
 git clone https://github.com/cleitinhodev/easy_game_translator.git
 cd easy_game_translator
 ```
 
-(Com a GitHub CLI: `gh repo clone cleitinhodev/easy_game_translator`. Com o `.zip`: descompacte e entre na pasta.)
+(Com a GitHub CLI: `gh repo clone cleitinhodev/easy_game_translator`. Com o `.zip`: descompacte e entre na pasta.
+Para a versão estável exata: `git checkout stable-4.0.9`.)
 
 **3. Instale as dependências e rode:**
 
@@ -266,6 +324,23 @@ momento (o cartão avisa). Os limites acima são os publicados pelos serviços e
   Cloud, ModernMT, Systran, Lara, Caiyun (sem plano grátis verificável), Reverso (bloqueio Cloudflare), Amazon Translate
   (assinatura AWS SigV4 + conta paga após 12 meses).
 
+## IA (opcional)
+
+Em **Opções › IA** você escolhe **uma** das três opções em **IA para traduzir**. A IA é **desligada por padrão** e o programa
+funciona 100% sem ela. Quando ligada, a IA escolhida vira o **primeiro motor** da tradução (com cache); se ela falhar, a fila
+de tradutores assume. IA e Scripts não ficam ligados ao mesmo tempo.
+
+- **Desligada** (padrão): só os [tradutores](#tradutores) (ou o seu [script](#scripts)) são usados.
+- **Gemini (Google, online)**: crie uma chave grátis em <https://aistudio.google.com/apikey>, cole em **Chave do Gemini** e
+  clique em **Testar Gemini**. O modelo recomendado é `gemini-3.5-flash-lite` (dá para escolher outro ou digitar o nome).
+  O campo **Contexto do jogo** (opcional) ajuda o tom da tradução (ex.: "fantasia medieval, diálogos formais"). Vai **só o texto
+  reconhecido** (e o contexto) para o Google — nunca imagens. A chave fica **criptografada** neste PC e pode ser apagada com
+  **Remover chave**. ⚠️ **Acompanhe você mesmo o consumo de tokens e os limites da sua chave** no site oficial
+  (<https://aistudio.google.com>); o uso e eventuais custos são de sua responsabilidade.
+- **Ollama (local, no seu PC)**: instale o Ollama (<https://ollama.com/download>), baixe um modelo (ex.: `ollama pull llama3.2`)
+  e deixe-o aberto. O programa mostra **Servidor rodando** e a lista de modelos instalados; escolha um e clique em **Testar Ollama**.
+  Endereço padrão: `http://localhost:11434`. **Nada sai do computador** (a não ser que você aponte para outro endereço).
+
 ## Scripts
 
 Em **Opções › Scripts** você pode usar **o seu próprio programa de tradução** — uma terceira alternativa aos tradutores e à
@@ -288,7 +363,7 @@ ao desligar o script, os tradutores voltam. Funciona no **canal único** e no **
   — **ou texto puro**. No canal único todo o texto impresso vira a tradução; no canal duplo separe as duas saídas com uma linha
   contendo só `---`.
 - **Erro**: devolva `{"error": "mensagem"}` ou saia com código diferente de 0 (a mensagem do stderr aparece no programa).
-- **Limites**: tempo máximo configurável (padrão 15 s; o script é encerrado se passar), saída de até 1 MB.
+- **Limites**: tempo máximo configurável de 1 a 120 s (padrão 15 s; o script é encerrado se passar), saída de até 1 MB.
 - **Tipos**: `.py` (Python), `.js`/`.mjs`/`.cjs` (Node.js), `.ps1` (PowerShell), `.bat`/`.cmd`, `.sh`, `.rb`, `.php`, `.lua`,
   `.pl` e `.exe` — o programa certo é escolhido pela extensão e precisa estar instalado.
 
@@ -305,6 +380,17 @@ limpo (sem o token do programa e sem chaves como `GEMINI_API_KEY`) e com tempo e
 - [`glossario_offline.js`](examples/scripts/glossario_offline.js) — Node.js, glossário offline (nada sai do PC); responde em
   texto puro (`---` entre os canais).
 - [`modelo_basico.py`](examples/scripts/modelo_basico.py) — modelo mínimo para começar.
+
+Os mesmos arquivos estão anexados na [versão 4.0.9](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9). Para usar: instale o **Python** (<https://www.python.org/downloads/>)
+ou o **Node.js** (<https://nodejs.org/en/download>), abra **Opções › Scripts › Escolher arquivo**, confirme a impressão digital,
+clique em **Testar script** (canal único e duplo) e ligue **Usar script**. Um script mínimo em Python:
+
+```python
+import json, sys
+pedido = json.load(sys.stdin)                       # {"inputs": [...], "source_lang": ..., "target_lang": ...}
+saidas = [texto.upper() for texto in pedido["inputs"]]  # troque pela sua tradução
+print(json.dumps({"outputs": saidas}, ensure_ascii=False))
+```
 
 ## Segurança e privacidade
 
@@ -352,18 +438,27 @@ Limites honestos: a sobrescrita é "melhor esforço" (SSDs e sistemas de arquivo
 setores livres), e o Python não permite zerar strings na memória — a chave fica na memória só durante o uso e some quando o
 processo termina.
 
-## Como usar
+## Primeiro uso
 
-1. Abra o jogo (de preferência em **janela sem borda** — tela cheia exclusiva não permite janelas por cima).
-2. Clique em **Selecionar região** e arraste sobre a área onde aparece o texto (legenda, diálogo, chat).
-3. Escolha o **Alfabeto** do jogo, o **OCR** e o idioma em **Traduzir para**.
-4. Clique em **Iniciar** (ou `Ctrl+Alt+S`). A tradução aparece em tempo real; `Ctrl+Alt+T` traduz na hora.
-5. Opcional: **Box Mode** (`Ctrl+Alt+B`) para ver a tradução por cima do jogo; **Canal duplo** para duas regiões;
-   salve um **perfil** por jogo.
+Vale para Windows e Linux. Para um passo a passo com imagens, veja o [tutorial online](https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/).
+
+1. **Intro**: na primeira vez aparece a intro com a Nina (clique ou `Esc` para pular). Enquanto ela roda, a linha
+   **"Verificando tradutores…"** testa os tradutores grátis e **liga sozinho os que responderem** (veja [Tradutores](#tradutores)).
+2. **Abra o jogo** de preferência em **janela** ou **janela sem borda** (*borderless*) — em tela cheia exclusiva nenhuma janela
+   aparece por cima.
+3. Clique em **Selecionar região** e arraste um retângulo sobre onde aparece o texto (legenda, diálogo, chat). Dá para trocar depois.
+4. Escolha o **Alfabeto** (a escrita/idioma **do jogo**, ex.: `abc(EN)`), o **OCR** (deixe **RapidOCR**, já vem junto) e
+   **Traduzir para** (o idioma em que **você** quer ler).
+5. Clique em **Iniciar** (ou `Ctrl+Alt+S`). A tradução aparece em tempo real no painel **Tradução**; `Ctrl+Alt+T` traduz na hora.
+6. Opcional: **Box Mode** (`Ctrl+Alt+B`) para ver a tradução por cima do jogo; **Canal duplo** para duas regiões ao mesmo tempo
+   (ex.: chat + legenda); salve um **perfil** por jogo; em **Opções (⚙)** ajuste tradutores, IA, Scripts, fonte e atalhos.
+
+O texto lido aparece em **Original** — se estiver errado, aumente a região, troque o **Alfabeto** ou teste outro OCR em
+**Opções › OCR**. Frases já traduzidas ficam no **cache** e voltam instantaneamente (inclusive offline).
 
 ## Requisitos
 
-- **Usar**: Windows 10/11 x64. Nada mais é obrigatório (o RapidOCR já vem junto). Tesseract, EasyOCR, Argos, Ollama etc. são opcionais.
+- **Usar**: Windows 10/11 x64, ou Linux x86_64 (glibc 2.28+, sessão X11). Nada mais é obrigatório (o RapidOCR já vem junto). Tesseract, EasyOCR, Argos, Ollama etc. são opcionais.
 - **Desenvolver**: Node.js 20+ e Python 3.10+ (recomendado 3.12).
 
 ## Compilar a partir do código
@@ -463,6 +558,29 @@ Fontes e licenças: `THIRD_PARTY_NOTICES.md`.
 - Microfone: usa o reconhecimento do Google (precisa de internet). Narração: gTTS (internet).
 - EasyOCR/Argos baixam modelos grandes e ficam fora do pacote por padrão (instale com `pip` — veja Opções › OCR).
 
+## Versão estável (versão segura)
+
+Cada **versão segura** é uma versão testada de ponta a ponta que fica congelada num branch próprio, para você sempre ter para
+onde voltar:
+
+| Branch | Versão | Situação |
+|---|---|---|
+| [`stable-4.0.9`](https://github.com/cleitinhodev/easy_game_translator/tree/stable-4.0.9) | [4.0.9](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9) | ✅ **versão segura atual** (recomendada) |
+| [`stable-4.0.6`](https://github.com/cleitinhodev/easy_game_translator/tree/stable-4.0.6) | [4.0.6](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.6) | versão segura anterior |
+| `main` | em desenvolvimento | as próximas versões podem trazer mudanças e testes novos |
+
+Os branches `stable-*` e as tags de versão (`v4.0.x`) **não são alterados** depois de publicados.
+
+**Como voltar para uma versão anterior (rollback):**
+
+1. Abra [Releases](../../releases) e entre na versão desejada (ex.: [v4.0.6](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.6)).
+2. Baixe o arquivo do seu sistema (setup/portable/AppImage/.deb) e confira o SHA-256 com o `SHA256SUMS.txt` daquela versão.
+3. **Windows (setup):** instale por cima (ou desinstale antes em *Configurações › Aplicativos*). **Portátil/AppImage:** é só
+   abrir o arquivo antigo. **.deb:** `sudo apt install --allow-downgrades ./EasyGameTranslator-<versão>-amd64.deb`.
+4. Suas configurações (`%APPDATA%\EasyGameTranslator` no Windows, `~/.config/EasyGameTranslator` no Linux) são mantidas.
+   Se algo estranhar, faça uma cópia dessa pasta antes de voltar. Chaves salvas numa versão mais nova podem precisar ser coladas de novo.
+5. Código-fonte de uma versão segura: `git checkout stable-4.0.9` (ou `stable-4.0.6`).
+
 ## Histórico de versões
 
 Veja o [CHANGELOG.md](CHANGELOG.md).
@@ -480,7 +598,7 @@ Componentes de terceiros (fontes OFL, Electron, bibliotecas Python etc.): [THIRD
 ## Links
 
 - Site: <https://www.bugzinho.com/>
-- Tutorial: <https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/>
+- **Tutorial online**: <https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/>
 - Patreon: <https://www.patreon.com/CleitinhoDEV>
 - GitHub: <https://github.com/cleitinhodev>
 - **Doações**: <https://www.bugzinho.com/donate>
@@ -497,7 +615,11 @@ your own encrypted key, offline Argos), each with its own card, privacy note and
 dual channel (two regions), per-game profiles, glossary/replacements, history export, optional AI (Gemini/Ollama),
 an optional component manager, **20 UI languages** (including Arabic RTL) and 14 fonts for the translated text.
 
-- **Download**: see [Releases](../../releases/latest) (`-setup.exe` installer or `-portable.exe`, Windows 10/11 x64).
+- **Current stable ("safe") version: [4.0.9](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9)** (branch `stable-4.0.9`; previous stable: `stable-4.0.6`). Stable
+  branches and version tags are never changed; to roll back, download an older version from [Releases](../../releases).
+  Online tutorial (Portuguese): <https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/>
+- **Download**: [v4.0.9](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9) — `-setup.exe` installer or `-portable.exe` (Windows 10/11 x64), `-x86_64.AppImage` or
+  `-amd64.deb` (Linux x86_64, X11 session).
   The executables are **not code-signed**, so SmartScreen may warn: click *More info → Run anyway*.
 - **Use**: *Select region* → choose alphabet/OCR/target language → *Start* (`Ctrl+Alt+S`). `Ctrl+Alt+B` toggles Box Mode.
 - **Beginners** (full step-by-step in Portuguese: [Iniciantes](#iniciantes)):
@@ -510,6 +632,8 @@ an optional component manager, **20 UI languages** (including Arabic RTL) and 14
     `npm ci && npm run setup:python && npm run dev`; optional AppImage with `npm run dist:linux`. Screen capture needs an
     **X11** session (Wayland usually blocks it). Tested only on Debian 13 / Python 3.13 / X11.
 - **Privacy**: screenshots and OCR stay on your PC; online translators receive only the recognized text (never images).
+- **AI (optional, off by default)**: *Options › AI* → Off, Gemini (your own encrypted key; watch your token usage) or local
+  Ollama (nothing leaves the PC).
 - **Translator queue (4.0.9)**: enabled services are tried in order (MyMemory first by default); the first that answers wins
   and the others are not called. At startup (during the intro) the free services are tested in parallel and the ones that
   answer are enabled automatically.
