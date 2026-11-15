@@ -47,6 +47,11 @@ function Pane({ kind, ch, compact }: { kind: 'original' | 'translation'; ch: Cha
                 <Chip tone={v.cached ? 'accent' : 'default'} title={v.cached ? t('main.from_cache') : v.engine}>{v.cached ? <><IZap size={11} /> {t('main.cache')}</> : v.engine === 'script' ? t('sc.engine') : v.engine}{v.ms ? ` · ${Math.round(v.ms)} ms` : ''}</Chip>
               </motion.span>
             )}
+            {!isTr && v.ocrEngine === 'script' && v.orev > 0 && (
+              <motion.span key="ocs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <Chip title={t('ocs.engine')}>{t('ocs.engine')}</Chip>
+              </motion.span>
+            )}
             {!isTr && v.confidence != null && v.orev > 0 && (
               <motion.span key={`${v.orev}-c`} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <Chip tone={v.confidence >= 70 ? 'ok' : v.confidence >= 45 ? 'warn' : 'err'} title={t('main.confidence')}>{Math.round(v.confidence)}%</Chip>

@@ -2,6 +2,7 @@
 // as demais (detalhes técnicos de motores/OCR) continuam como o backend envia.
 const MAP: [RegExp, string][] = [
   [/^Nenhuma região/, 'toast.no_region'],
+  [/^Script OCR \[(\w+)\]/, 'ocs.err.'],
   [/^Script \[(\w+)\]/, 'sc.err.'],
   [/^IA não configurada/, 'be.ai_unconfigured'],
   [/^falha na captura/, 'be.capture_fail'],
@@ -21,6 +22,14 @@ export function mapBackend(text: string, t: (k: string, p?: Record<string, strin
       const k = `sc.err.${m[1]}`
       const msg = t(k, { detail })
       return msg === k ? text : msg + (detail && ['exit', 'script_error', 'count', 'unsupported', 'start'].includes(m[1]) ? ` — ${detail}` : '')
+    }
+    if (key === 'ocs.err.') {       // erros do script de OCR (4.1 beta): "Script OCR [codigo]: detalhe"
+      const detail = text.replace(/^Script OCR \[\w+\]:?\s*/, '')
+      const own = `ocs.err.${m[1]}`
+      let msg = t(own, { detail })
+      if (msg === own) { const k = `sc.err.${m[1]}`; msg = t(k, { detail }); if (msg === k) return text }
+      msg += detail && ['exit', 'script_error', 'count', 'unsupported', 'start'].includes(m[1]) ? ` — ${detail}` : ''
+      return t('ocs.err_prefix', { msg })
     }
     return t(key, { err: text.replace(/^[^:]*:\s*/, '') })
   }

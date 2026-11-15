@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import ninaPng from '@/assets/nina.png'
 import { useStore, useT } from '@/store'
+import { displayVersion } from '@/lib/format'
 import { IMenu } from './icons'
 import { IconButton, Lights } from './ui'
 
@@ -8,7 +9,7 @@ export function Titlebar() {
   const t = useT()
   const running = useStore((s) => s.running)
   const conn = useStore((s) => s.conn)
-  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.0.9')
+  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.1.0-beta.1')
   const platform = window.egt?.platform ?? 'linux'
   const openMenu = (e: React.MouseEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -20,7 +21,7 @@ export function Titlebar() {
         <img className="tb-logo" src={ninaPng} alt="" draggable={false} />
         <div className="tb-title">
           <strong>Easy Game Translator</strong>
-          <span className="tb-ver">v{version.split('.').slice(0, 2).join('.')}</span>
+          <span className="tb-ver">v{displayVersion(version, true)}</span>
         </div>
         <Lights active={running} />
       </div>

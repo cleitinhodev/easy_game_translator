@@ -67,6 +67,8 @@ export function Toolbar() {
   const { profile, settings, ocr, profiles, snapshot } = s
   if (!profile || !settings || !snapshot) return null
   const dual = profile.mode === 'dual'
+  const ocrScriptOn = !!settings.ocr_script?.enabled
+  const ocrScriptReady = !!s.ocrScript?.path && !!s.ocrScript?.exists && !s.ocrScript?.changed
   const ocrStatus = ocr.find((o) => o.id === profile.ocr_engine)
 
   const saveProfileDialog = () => s.setModal('profile-save')
@@ -132,9 +134,10 @@ export function Toolbar() {
         <label className="opt-group">
           <span className="opt-label">{t('main.ocr')}</span>
           <span className="opt-ctl">
-          <Select width={132} label={t('main.ocr')} value={profile.ocr_engine} onChange={(v) => s.patchProfile({ ocr_engine: v })}
-            icon={<span className={`dot-s ${ocrStatus?.available ? 'ok' : 'err'}`} />}
-            options={ocr.map((o) => ({ value: o.id, label: o.name, sub: o.available ? t('ocr.installed_short') : t('ocr.not_installed_short') }))} />
+          <Select width={132} label={t('main.ocr')} value={ocrScriptOn ? 'script' : profile.ocr_engine} onChange={(v) => s.patchProfile({ ocr_engine: v })}
+            icon={<span className={`dot-s ${(ocrScriptOn ? ocrScriptReady : ocrStatus?.available) ? 'ok' : 'err'}`} />}
+            options={[...ocr.map((o) => ({ value: o.id, label: o.name, sub: o.available ? t('ocr.installed_short') : t('ocr.not_installed_short') })),
+              ...(ocrScriptOn || ocrScriptReady ? [{ value: 'script', label: t('ocs.engine'), sub: s.ocrScript?.name || '' }] : [])]} />
         </span>
         </label>
         <label className="opt-group">

@@ -12,10 +12,13 @@ Funciona **offline** depois de instalado (OCR local, cache de traduções e moto
 > A anterior, [4.0.6](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.6), continua disponível (branch `stable-4.0.6`).
 > Veja a [política de versão estável](#versão-estável-versão-segura).
 >
+> 🧪 **Em teste: [4.1 beta](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.1.0-beta.1)** (pré-lançamento, `v4.1.0-beta.1`) — traz os [Scripts de OCR](#scripts-de-ocr-41-beta).
+> Use se quiser experimentar; para o dia a dia, fique na **4.0.9** (estável).
+>
 > 📖 **Tutorial online com imagens:** <https://cleitinhodev.github.io/homepage/projects/easy-game-translator-tutorial/>
 
 **Índice:** [O que é](#o-que-é) · [Download](#download-e-instalação) · [Iniciantes: Windows](#windows) · [Iniciantes: Linux](#linux) ·
-[Primeiro uso](#primeiro-uso) · [Tradutores](#tradutores) · [IA](#ia-opcional) · [Scripts](#scripts) ·
+[Primeiro uso](#primeiro-uso) · [Tradutores](#tradutores) · [IA](#ia-opcional) · [Scripts](#scripts) · [Scripts de OCR (beta)](#scripts-de-ocr-41-beta) ·
 [Segurança e privacidade](#segurança-e-privacidade) · [Versão estável](#versão-estável-versão-segura) ·
 [Perguntas frequentes](#perguntas-frequentes) · [Compilar](#compilar-a-partir-do-código) · [Licença](#licença) · [English](#english-summary)
 
@@ -42,6 +45,8 @@ RPGs antigos, chats de jogos online etc. Não mexe nos arquivos do jogo e não i
 - **IA opcional** (desligada por padrão): **Gemini** ou **Ollama** local — só a escolhida entra na tradução.
 - **Scripts** (novo na 4.0.9): use o **seu próprio script de tradução** (Python, Node.js, PowerShell, .bat, .sh, .exe…) no
   lugar dos tradutores ou da IA — veja [Scripts](#scripts).
+- **Scripts de OCR** (em teste na 4.1 beta): use o **seu próprio código para ler o texto da tela** no lugar dos motores de OCR,
+  com canal único/duplo e miniatura como sempre — veja [Scripts de OCR](#scripts-de-ocr-41-beta).
 - **Verificação automática na abertura**: durante a intro o programa testa os tradutores e **liga sozinho** os que responderem.
 - **Privacidade**: capturas e OCR ficam no seu PC; chaves de API ficam **criptografadas** e presas a este computador (veja [Segurança e privacidade](#segurança-e-privacidade)).
 - **Gerenciador de componentes** (Opções › Atualizações): instala só o que você escolher usar, com tamanho, confirmação e progresso.
@@ -392,6 +397,84 @@ saidas = [texto.upper() for texto in pedido["inputs"]]  # troque pela sua tradu�
 print(json.dumps({"outputs": saidas}, ensure_ascii=False))
 ```
 
+## Scripts de OCR (4.1 beta)
+
+> 🧪 **Em teste na [4.1 beta](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.1.0-beta.1)** (pré-lançamento). A versão estável continua sendo a
+> **[4.0.9](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9)**, que não tem esta função.
+
+Em **Opções › OCR › Quem lê o texto da tela** escolha **Meu script** para usar **o seu próprio programa de OCR** no lugar dos
+motores do app (RapidOCR, Tesseract, EasyOCR…). **Só um fica ativo**: ao confirmar um script ele passa a ler a tela; ao voltar
+para **Motores de OCR do app**, o script desliga e o motor que você tinha escolhido volta. É independente da tradução: os
+tradutores, a IA ou o [script de tradução](#scripts) continuam funcionando normalmente (dá até para usar os dois scripts juntos).
+
+> ⚠️ **ATENÇÃO**: use **só scripts que você mesmo criou ou em que confia**. Um script roda no seu PC com as mesmas permissões
+> que você: um script de terceiros pode apagar arquivos, ler seus dados ou enviá-los para a internet.
+
+O app continua fazendo **tudo o que faz com os outros OCRs** — captura da região, **miniatura da captura** na janela principal,
+detecção de mudança, limpeza do texto, regras de substituição, filtro de confiança, estabilização, tradução e Box Mode. O
+script só troca a etapa "imagem → texto".
+
+**Contrato: recebe uma ou duas imagens (uma por canal) e retorna uma ou duas saídas em string — o texto lido em cada imagem.**
+
+- **Entrada** (stdin, UTF-8): o app salva cada captura como **PNG numa pasta temporária só sua** e escreve um JSON com os caminhos:
+
+  ```json
+  {"version": 1, "kind": "ocr", "mode": "dual",
+   "images": [
+    {"channel": "a", "path": ".../a.png", "width": 1292, "height": 256,
+     "raw_path": ".../a_raw.png", "raw_width": 640, "raw_height": 122},
+    {"channel": "b", "path": ".../b.png", "width": 1292, "height": 168,
+     "raw_path": ".../b_raw.png", "raw_width": 640, "raw_height": 78}],
+   "channels": ["a", "b"],
+   "alphabet": "abc(EN)", "ocr_lang": "eng", "lang_hint": "en", "cjk": false,
+   "preprocess": {"scale": 2.0, "grayscale": true, "...": "..."}}
+  ```
+
+  - `path` = imagem **já pré-processada** (a mesma que os motores do app recebem, com as opções de pré-processamento da aba OCR);
+    `raw_path` = **captura original** da tela. Use a que funcionar melhor.
+  - `ocr_lang` = código de idioma do Tesseract para o alfabeto escolhido; `lang_hint` = código curto (ex.: `en`, `ja`); `cjk` = alfabeto chinês/japonês/coreano.
+  - Opção **Enviar imagens também em base64**: acrescenta `base64`/`raw_base64` (PNG) em cada imagem, para quem não quer abrir arquivo.
+  - Os PNGs são apagados logo depois que o script termina.
+- **Canal duplo**: chegam **sempre 2 imagens, na ordem [canal A, canal B]**, numa chamada só, e o script devolve 2 saídas. No canal
+  único, 1 imagem e 1 saída. O script roda quando **qualquer** canal muda; só o canal que mudou atualiza a miniatura e o texto.
+- **Saída** (stdout, UTF-8), na mesma ordem das imagens:
+  - JSON: `{"outputs": ["texto A", "texto B"]}`
+  - JSON com confiança (0–100; 0–1 também é aceito): `{"outputs": [{"text": "texto A", "confidence": 92.5}, {"text": "texto B", "confidence": 88}]}`
+    — textos abaixo do **filtro de confiança** são ignorados, como nos motores do app. Sem confiança, o filtro não se aplica.
+  - **Texto puro**: no canal único todo o texto; no canal duplo as duas saídas separadas por uma linha contendo só `---`.
+  - Sem texto na imagem: devolva `""` (não é erro; o app só espera o próximo texto).
+- **Erro**: `{"error": "mensagem"}` ou código de saída diferente de 0 (a mensagem do stderr aparece no app). A miniatura continua aparecendo.
+- **Limites**: tempo máximo de 1 a 120 s (padrão **20 s**), saída de até 1 MB, até 20.000 caracteres por canal.
+- **Tipos de arquivo**: os mesmos do script de tradução (`.py`, `.js`, `.ps1`, `.bat`, `.sh`, `.exe`…), escolhidos pela extensão.
+
+**Segurança** (a mesma do script de tradução): confirmação com caminho e **SHA-256** antes de rodar, nova confirmação obrigatória
+se o arquivo mudar, execução sem shell e sem janela, ambiente limpo (sem o token do programa e sem chaves de API), tempo e
+saída limitados, imagens numa pasta temporária privada (só o seu usuário lê) apagada logo depois. As capturas **nunca saem do
+seu PC por conta do app** — só o seu script decide o que fazer com elas (por isso o aviso acima).
+
+**Testar script**: na própria aba, com uma **imagem de exemplo** ou a **sua região** de captura, em canal único ou duplo. Mostra
+a miniatura, a imagem que o script recebe, o texto lido, a confiança, o tempo e (opcional) o JSON enviado.
+
+![Teste do script de OCR, canal duplo](docs/screenshots/ocr-script-test.png)
+
+**Exemplos prontos** (em [`examples/scripts/`](examples/scripts), comentados em português; também dá para ver/copiar/salvar na aba):
+
+- [`ocr_modelo_basico.py`](examples/scripts/ocr_modelo_basico.py) — modelo mínimo, **sem dependências**: só confere o tamanho de cada
+  imagem e responde "imagem de L x A recebida". Bom para entender o contrato.
+- [`ocr_tesseract.py`](examples/scripts/ocr_tesseract.py) — **OCR de verdade** com o Tesseract (só biblioteca padrão do Python; o
+  Tesseract precisa estar instalado — Opções › OCR › Tesseract, ou `sudo apt install tesseract-ocr` no Linux). Devolve texto e confiança.
+- [`ocr_rapidocr.py`](examples/scripts/ocr_rapidocr.py) — OCR com o RapidOCR (`pip install rapidocr_onnxruntime`). Mais lento por
+  ciclo (~2 s), porque carrega o modelo a cada chamada.
+
+Um script mínimo em Python:
+
+```python
+import json, sys
+pedido = json.load(sys.stdin)                       # {"images": [{"path": ..., "raw_path": ...}], ...}
+saidas = [{"text": "texto lido em " + im["channel"], "confidence": 100} for im in pedido["images"]]
+print(json.dumps({"outputs": saidas}, ensure_ascii=False))
+```
+
 ## Segurança e privacidade
 
 **O que fica só no seu computador**
@@ -567,6 +650,7 @@ onde voltar:
 |---|---|---|
 | [`stable-4.0.9`](https://github.com/cleitinhodev/easy_game_translator/tree/stable-4.0.9) | [4.0.9](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.9) | ✅ **versão segura atual** (recomendada) |
 | [`stable-4.0.6`](https://github.com/cleitinhodev/easy_game_translator/tree/stable-4.0.6) | [4.0.6](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.0.6) | versão segura anterior |
+| `main` (tag [`v4.1.0-beta.1`](https://github.com/cleitinhodev/easy_game_translator/releases/tag/v4.1.0-beta.1)) | 4.1 beta | 🧪 **pré-lançamento em teste** (Scripts de OCR) — não é versão segura |
 | `main` | em desenvolvimento | as próximas versões podem trazer mudanças e testes novos |
 
 Os branches `stable-*` e as tags de versão (`v4.0.x`) **não são alterados** depois de publicados.
@@ -645,6 +729,12 @@ an optional component manager, **20 UI languages** (including Arabic RTL) and 14
   API keys are stored encrypted (Windows DPAPI, bound to your Windows user; on Linux the system keyring or a weaker
   machine-bound AES-GCM fallback) and can be wiped with *Options › AI › Remove key*. Monitor your own Gemini token usage at
   <https://aistudio.google.com>.
+- **OCR Scripts (4.1 beta, pre-release — stable is still 4.0.9)**: *Options › OCR › Who reads the screen text → My script* runs
+  your own OCR program instead of the built-in engines (only one is active; translation is unaffected). It receives
+  `{"version":1,"kind":"ocr","mode":"single|dual","images":[{"channel","path" (preprocessed PNG),"raw_path" (original PNG),...}],...}`
+  on stdin (dual = always 2 images [A, B]) and prints `{"outputs":["text"|{"text","confidence"}...]}` or plain text
+  (`---` between channels). The app still makes the thumbnail and does cleanup, filters and translation. Same SHA-256
+  approval and sandboxing as translation scripts. Examples: `ocr_modelo_basico.py`, `ocr_tesseract.py`, `ocr_rapidocr.py`.
 - **Build**: `npm install && npm run setup:python && npm run dev`; release build: `npm run build:backend && npm run dist:win`.
 - **Translate the UI**: edit `shared/i18n/<code>.json` (keep `{placeholders}` and product names), run `npm run check:i18n`.
   Non-Portuguese/English locales were machine-assisted and may contain mistakes — fixes are welcome.

@@ -364,3 +364,19 @@ html[dir='rtl'] .drawer, html[dir='rtl'] .modal-layer .modal { direction: rtl; }
 .sc-banner p { margin: 0; }
 .ac-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-dim); margin: 2px 0 8px; }
 .intro-check { position: absolute; left: 0; right: 0; bottom: 64px; text-align: center; font-size: 12px; color: rgba(220, 230, 255, .7); letter-spacing: .02em; }
+
+/* ---- 4.1 beta: script de OCR (aba OCR) */
+.ocs-panel { display: flex; flex-direction: column; gap: inherit; }
+.ocs-beta { display: inline-block; margin-inline-start: 4px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; background: rgba(255, 204, 77, .16); color: #ffd76a; border: 1px solid rgba(255, 204, 77, .35); vertical-align: 1px; }
+.ocs-results { overflow: hidden; display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.ocs-res { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; background: rgba(120, 160, 255, .04); }
+.ocs-res-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ocs-figs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ocs-figs figure { margin: 0; min-width: 0; }
+.ocs-figs figcaption { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); margin-bottom: 5px; }
+.ocs-figs img { max-width: 100%; max-height: 120px; object-fit: contain; border-radius: 9px; border: 1px solid var(--line); background: #000; display: block; }
+.ocs-figs img.checker { background: #fff; }
+.ocs-text { white-space: pre-wrap; font-weight: 600; }
+.linkish { background: none; border: 0; padding: 0; color: var(--cyan); cursor: pointer; font: inherit; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 560px) { .ocs-figs { grid-template-columns: 1fr; } }

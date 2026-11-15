@@ -294,17 +294,13 @@ def parse_output(raw: str, n: int) -> tuple[list[str], str]:
     return parts, "text"
 
 
-def run_script(path: str, inputs: list[str], src: str = "", tgt: str = "pt", timeout: float = DEFAULT_TIMEOUT,
-               channels: Optional[list[str]] = None) -> ScriptResult:
-    """Executa o script uma vez com 1 ou 2 entradas. Não confere o hash (veja ScriptRunner)."""
-    if not inputs or len(inputs) > 2:
-        raise ScriptError("count", str(len(inputs)))
+def execute(path: str, payload: dict, timeout: float = DEFAULT_TIMEOUT) -> tuple[str, str, float]:
+    """Roda o arquivo UMA vez: JSON no stdin → (stdout, stderr, ms). Sem shell, ambiente limpo, tempo limite e limite
+    de tamanho. Levanta ScriptError(not_found/no_runtime/unsupported/start/timeout/too_big/exit). Não confere o hash."""
     if not path or not os.path.isfile(path):
         raise ScriptError("not_found", os.path.basename(path or ""))
+    path = os.path.abspath(path)                 # o processo roda na pasta do script: caminho relativo quebraria
     cmd, _label = build_command(path)
-    payload = {"version": CONTRACT_VERSION, "mode": "dual" if len(inputs) == 2 else "single",
-               "inputs": [str(x)[:MAX_INPUT_CHARS] for x in inputs], "source_lang": src or "auto",
-               "target_lang": tgt, "channels": channels or (["a", "b"] if len(inputs) == 2 else ["uni"])}
     data = (json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8")
     kw: dict = {}
     if os.name == "nt":
@@ -349,26 +345,53 @@ def run_script(path: str, inputs: list[str], src: str = "", tgt: str = "pt", tim
     if proc.returncode != 0:
         tail = " ".join(stderr.strip().splitlines()[-3:])[:300]
         raise ScriptError("exit", f"{proc.returncode}" + (f" — {tail}" if tail else ""))
-    raw = b"".join(out_buf).decode("utf-8", "replace")
+    return b"".join(out_buf).decode("utf-8", "replace"), stderr[-2000:], ms
+
+
+def run_script(path: str, inputs: list[str], src: str = "", tgt: str = "pt", timeout: float = DEFAULT_TIMEOUT,
+               channels: Optional[list[str]] = None) -> ScriptResult:
+    """Executa o script de TRADUÇÃO uma vez com 1 ou 2 entradas. Não confere o hash (veja ScriptRunner)."""
+    if not inputs or len(inputs) > 2:
+        raise ScriptError("count", str(len(inputs)))
+    if not path or not os.path.isfile(path):
+        raise ScriptError("not_found", os.path.basename(path or ""))
+    payload = {"version": CONTRACT_VERSION, "mode": "dual" if len(inputs) == 2 else "single",
+               "inputs": [str(x)[:MAX_INPUT_CHARS] for x in inputs], "source_lang": src or "auto",
+               "target_lang": tgt, "channels": channels or (["a", "b"] if len(inputs) == 2 else ["uni"])}
+    raw, stderr, ms = execute(path, payload, timeout)
     outs, fmt = parse_output(raw, len(inputs))
-    return ScriptResult(outs, ms, fmt, stderr[-2000:])
+    return ScriptResult(outs, ms, fmt, stderr)
 
 
 class ScriptRunner:
-    """Liga o script às configurações: caminho, hash aprovado e tempo limite (seção `script`)."""
+    """Liga o script às configurações: caminho, hash aprovado e tempo limite.
 
-    def __init__(self, settings):
+    `section` = "script" (script de tradução, 4.0.9) ou "ocr_script" (script de OCR, 4.1 beta) — cada um com o seu
+    arquivo, a sua aprovação (SHA-256) e o seu tempo limite."""
+
+    def __init__(self, settings, section: str = "script", default_timeout: float = DEFAULT_TIMEOUT):
         self.settings = settings
+        self.section = section
+        self.default_timeout = float(default_timeout)
         self._lock = threading.Lock()
         self.last_error: Optional[ScriptError] = None
         self.last_ok = 0.0
         self.runs = 0
 
+    def _get(self, key: str, default=None):
+        return self.settings.get(f"{self.section}.{key}", default)
+
     def active(self) -> bool:
-        return bool(self.settings.get("script.enabled", False))
+        return bool(self._get("enabled", False))
 
     def path(self) -> str:
-        return str(self.settings.get("script.path", "") or "")
+        return str(self._get("path", "") or "")
+
+    def timeout(self) -> float:
+        try:
+            return float(self._get("timeout", self.default_timeout) or self.default_timeout)
+        except (TypeError, ValueError):
+            return self.default_timeout
 
     def check(self) -> str:
         """Confere arquivo + hash aprovado. Devolve o caminho. Levanta ScriptError."""
@@ -377,7 +400,7 @@ class ScriptRunner:
             raise ScriptError("no_script")
         if not os.path.isfile(path):
             raise ScriptError("not_found", os.path.basename(path))
-        approved = str(self.settings.get("script.sha256", "") or "")
+        approved = str(self._get("sha256", "") or "")
         if not approved:
             raise ScriptError("not_approved")
         try:
@@ -389,11 +412,15 @@ class ScriptRunner:
         return path
 
     def run(self, inputs: list[str], src: str, tgt: str, channels: Optional[list[str]] = None) -> ScriptResult:
+        """Script de tradução (seção "script")."""
+        return self.guarded(lambda path: run_script(path, inputs, src, tgt, self.timeout(), channels))
+
+    def guarded(self, fn):
+        """Confere arquivo + hash e chama fn(caminho) um de cada vez, guardando o último erro/sucesso."""
         path = self.check()
-        to = float(self.settings.get("script.timeout", DEFAULT_TIMEOUT) or DEFAULT_TIMEOUT)
         with self._lock:                         # um de cada vez (canal A e B chegam juntos numa só chamada)
             try:
-                res = run_script(path, inputs, src, tgt, to, channels)
+                res = fn(path)
             except ScriptError as exc:
                 self.last_error = exc
                 raise
@@ -405,8 +432,8 @@ class ScriptRunner:
     def info(self) -> dict:
         path = self.path()
         d = {"enabled": self.active(), "path": path, "name": os.path.basename(path) if path else "",
-             "sha256": str(self.settings.get("script.sha256", "") or ""), "exists": bool(path and os.path.isfile(path)),
-             "timeout": float(self.settings.get("script.timeout", DEFAULT_TIMEOUT)), "runs": self.runs,
+             "sha256": str(self._get("sha256", "") or ""), "exists": bool(path and os.path.isfile(path)),
+             "timeout": self.timeout(), "runs": self.runs,
              "last_ok": self.last_ok, "error": self.last_error.code if self.last_error else "",
              "error_detail": self.last_error.detail if self.last_error else "", "current_sha256": "", "changed": False}
         if d["exists"]:

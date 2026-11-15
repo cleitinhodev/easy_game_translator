@@ -12,7 +12,8 @@ export function StatusBar() {
   const hk = useStore((s) => s.settings?.hotkeys)
   const platform = window.egt?.platform ?? 'linux'
   const net = m?.net ?? 'unknown'
-  const engineName = ocr.find((o) => o.id === (m?.ocr_engine ?? profile?.ocr_engine))?.name ?? '—'
+  const eid = m?.ocr_engine ?? profile?.ocr_engine
+  const engineName = eid === 'script' ? t('ocs.engine') : ocr.find((o) => o.id === eid)?.name ?? '—'
   const netLabel = net === 'online' ? t('status.online') : net === 'offline' ? t('status.offline') : net === 'cache' ? t('status.cache_mode') : t('status.checking')
   return (
     <footer className="statusbar" role="status">

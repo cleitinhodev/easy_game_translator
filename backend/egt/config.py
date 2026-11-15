@@ -89,6 +89,13 @@ DEFAULTS: dict[str, Any] = {
         "sha256": "",               # hash aprovado pelo usuário; se o arquivo mudar, pede nova confirmação
         "timeout": 15.0,            # segundos (1–120)
     },
+    "ocr_script": {                  # 4.1 beta: script de OCR — um arquivo do usuário lê a imagem no lugar dos motores de OCR
+        "enabled": False,           # ligado = os motores embutidos não são usados (o motor escolhido no perfil fica guardado)
+        "path": "",                 # só muda pela confirmação (/api/ocr-script/approve), nunca pelo PATCH comum
+        "sha256": "",               # hash aprovado; se o arquivo mudar, para e pede nova confirmação
+        "timeout": 20.0,            # segundos (1–120)
+        "send_base64": False,       # também manda as imagens em base64 no JSON (além dos caminhos dos PNGs)
+    },
     "box": {
         "alpha": 0.92,
         "borderless": False,
@@ -295,6 +302,9 @@ class Settings:
 
     def _sanitize(self) -> None:
         d = self.data
+        for sec in ("script", "ocr_script"):     # seção corrompida (não é objeto) → padrões
+            if not isinstance(d.get(sec), dict):
+                d[sec] = copy.deepcopy(DEFAULTS[sec])
         try:
             d["capture"]["interval"] = round(_clamp(float(d["capture"].get("interval", 1.0)), 0.2, 5.0), 2)
             f = d["filters"]
@@ -327,6 +337,16 @@ class Settings:
             sc["timeout"] = round(_clamp(float(sc.get("timeout", 15.0)), 1.0, 120.0), 1)
         except (TypeError, ValueError):
             sc["timeout"] = 15.0
+        oc = self.data["ocr_script"]
+        for k in ("enabled", "send_base64"):
+            oc[k] = bool(oc.get(k, False)) if isinstance(oc.get(k, False), (bool, int)) else False
+        for k in ("path", "sha256"):
+            if not isinstance(oc.get(k), str):
+                oc[k] = ""
+        try:
+            oc["timeout"] = round(_clamp(float(oc.get("timeout", 20.0)), 1.0, 120.0), 1)
+        except (TypeError, ValueError):
+            oc["timeout"] = 20.0
         if not isinstance(self.data["translation"].get("autocheck"), bool):
             self.data["translation"]["autocheck"] = True
         tr = self.data["translation"]
@@ -413,8 +433,8 @@ SECRET_PATHS = ("translation.mymemory_email", "translation.libre_key", "translat
                 "translation.microsoft_key", "translation.gcloud_key", "translation.baidu_key",
                 "translation.youdao_secret", "translation.niutrans_key", "ai.gemini_key")
 MASK = "••••••••"
-_EDITABLE_SECTIONS = ("ui", "capture", "filters", "ocr", "translation", "ai", "box", "hotkeys", "script")
-_LOCKED_PATHS = frozenset({"script.path", "script.sha256"})     # só pela confirmação do arquivo
+_EDITABLE_SECTIONS = ("ui", "capture", "filters", "ocr", "translation", "ai", "box", "hotkeys", "script", "ocr_script")
+_LOCKED_PATHS = frozenset({"script.path", "script.sha256", "ocr_script.path", "ocr_script.sha256"})     # só pela confirmação do arquivo
 
 
 def _leaf_paths(d: dict, prefix: str = "") -> list[str]:

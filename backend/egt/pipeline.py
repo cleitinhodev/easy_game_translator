@@ -47,6 +47,8 @@ class PipelineConfig:
     join_lines: bool = True
 
 
+SCRIPT_ENGINE = "script"      # 4.1 beta: script de OCR do usuário no lugar dos motores embutidos
+
 PREVIEW_MAX_W = 480
 PREVIEW_QUALITY = 70
 
@@ -351,6 +353,7 @@ class _Run:
                 del self.channels[name]
         self._do_retries()
         ocr_total = 0.0
+        states: list[tuple[str, _Channel]] = []
         for name, bbox in cfg.channels.items():
             if self.stop.is_set():
                 return
@@ -362,7 +365,12 @@ class _Run:
                 st.last_text = ""
             if force:
                 st.det.reset()
-            ocr_total += self._channel(name, st, cfg, force)
+            if cfg.ocr_engine == SCRIPT_ENGINE:
+                states.append((name, st))       # script de OCR: todos os canais numa execução só (abaixo)
+            else:
+                ocr_total += self._channel(name, st, cfg, force)
+        if states and not self.stop.is_set():
+            ocr_total += self._channels_script(states, cfg, force)
         if ocr_total:
             self._ocr_ms = ocr_total      # guarda o último OCR real (ciclos sem mudança custam 0)
 
@@ -398,6 +406,60 @@ class _Run:
             p._post_error(msg, "ocr")
             st.det.reset()                  # tenta de novo no próximo ciclo
             return 0.0
+        return self._handle_ocr(name, st, cfg, force, res, now)
+
+    def _channels_script(self, states: list, cfg: PipelineConfig, force: bool) -> float:
+        """Script de OCR (4.1 beta): captura todos os canais e, se algum mudou, roda o script UMA vez com as imagens
+        de todos eles (canal duplo: sempre [A, B], como o script de tradução). Cada canal que mudou recebe a sua
+        miniatura (feita pelo app a partir da captura) e o seu texto segue exatamente o caminho dos motores embutidos;
+        o texto de um canal que não mudou é ignorado (ele só deixa o texto pendente "envelhecer", como sempre)."""
+        p = self.p
+        grabbed = []
+        for name, st in states:
+            try:
+                img: Image.Image = p.capture_fn(st.bbox)
+            except Exception as exc:
+                p._post_error(f"Falha na captura: {exc}", "capture")
+                for _n, st0, _i, ch0, _t in grabbed:
+                    if ch0:
+                        st0.det.reset()         # o canal que já tinha mudado é lido de novo no próximo ciclo
+                return 0.0
+            now = p._clock()
+            changed = force or st.det.changed(img)
+            grabbed.append((name, st, img, changed, now))
+        for name, st, _img, changed, now in grabbed:
+            if not changed:
+                ready = st.stab.poll(now)
+                if ready:
+                    self._enqueue(name, ready, cfg)
+        if not any(g[3] for g in grabbed):
+            return 0.0
+        items = [(name, img, preprocess(img, cfg.preprocess)) for name, _st, img, _c, _n in grabbed]
+        mode = "dual" if len(cfg.channels) > 1 else "single"
+        try:
+            backend = p.ocr_provider(cfg.ocr_engine)
+            results = backend.recognize_channels(items, cfg.alphabet, mode, list(cfg.channels))
+        except Exception as exc:
+            for name, st, img, changed, _n in grabbed:
+                if changed:
+                    self._post_preview(name, st, img)
+                    st.det.reset()              # tenta de novo no próximo ciclo
+            if type(exc).__name__ not in ("OcrError", "OcrScriptError"):
+                log.exception("OCR (script) falhou")
+            p._post_error(str(exc) or type(exc).__name__, "ocr")
+            return 0.0
+        total = 0.0
+        for (name, st, img, changed, now), res in zip(grabbed, results):
+            if not changed:
+                continue
+            self._post_preview(name, st, img)   # a miniatura acompanha o resultado do OCR (mesma captura)
+            self._handle_ocr(name, st, cfg, force, res, now)
+            total = max(total, res.elapsed_ms)
+        return total
+
+    def _handle_ocr(self, name: str, st: _Channel, cfg: PipelineConfig, force: bool, res, now: float) -> float:
+        """Depois do OCR (embutido ou script): limpeza → substituições → filtros → evento 'ocr' → estabilizador/tradução."""
+        p = self.p
         text = p.replace_fn(clean_ocr_text(res.text, cfg.alphabet))
         min_chars = 1 if alphabet(cfg.alphabet).cjk else cfg.min_chars
         low_conf = (res.confidence is not None and res.confidence < cfg.min_confidence)

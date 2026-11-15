@@ -122,6 +122,11 @@ class ScriptTestBody(BaseModel):
     tgt: str = Field(default="", max_length=12)
 
 
+class OcrScriptTestBody(BaseModel):
+    mode: str = Field(default="single", pattern=r"^(single|dual)$")
+    source: str = Field(default="sample", pattern=r"^(sample|capture)$")
+
+
 class ArgosBody(BaseModel):
     src: str
     tgt: str
@@ -257,6 +262,9 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
     def broadcast_script() -> None:
         hub.publish({"type": "script", "data": ctrl.script.info()})
 
+    def broadcast_ocr_script() -> None:
+        hub.publish({"type": "ocr_script", "data": ctrl.ocr_script.info()})
+
     def broadcast_settings() -> None:
         hub.publish({"type": "settings", "data": public_view(ctrl.settings)})
 
@@ -323,10 +331,15 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
     def patch_profile(body: ProfilePatch):
         fields = body.model_dump(exclude_unset=True)
         try:
+            was = ctrl.ocr_script.active()
             changed = ctrl.update_profile(**fields)
         except (ValueError, TypeError) as exc:
             raise HTTPException(422, str(exc))
         broadcast_profile()
+        if ctrl.ocr_script.active() != was:          # escolher Script/motor embutido liga/desliga o script de OCR
+            ctrl.settings_changed(paths=["ocr_script.enabled"])
+            broadcast_settings()
+            broadcast_ocr_script()
         return {"changed": changed, "profile": ctrl.profile_dict()}
 
     @api.post("/profile/region")
@@ -390,6 +403,8 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
             hub.publish({"type": "engines", "data": ctrl.translation_engines()})
         if any(p.startswith("script.") for p in changed):
             broadcast_script()
+        if any(p.startswith("ocr_script.") for p in changed):
+            broadcast_ocr_script()
         return {"changed": changed, "settings": public_view(ctrl.settings)}
 
     # ---------------------------------------------------------------- modo Scripts
@@ -462,6 +477,95 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
         broadcast_script()
         return {"ok": True, "outputs": r.outputs, "format": r.format, "ms": round(r.ms), "stderr": r.stderr[-600:]}
 
+    # ---------------------------------------------------------------- script de OCR (4.1 beta)
+    @api.get("/ocr-script")
+    def ocr_script_info():
+        return ctrl.ocr_script.info()
+
+    @api.post("/ocr-script/inspect")
+    def ocr_script_inspect(body: ScriptPathBody):
+        """Dados para a confirmação (caminho, tamanho, SHA-256, interpretador). Não executa nada."""
+        return script_inspect_ep(body)
+
+    @api.post("/ocr-script/approve")
+    def ocr_script_approve(body: ScriptApproveBody):
+        """O usuário confirmou ESTE arquivo com ESTE hash para o OCR. Se o arquivo mudou entre ver e confirmar, recusa."""
+        if not body.confirmed:
+            raise HTTPException(400, "confirmação necessária")
+        try:
+            info = script_inspect(body.path)
+        except (ScriptError, OSError) as exc:
+            return _script_err(exc) if isinstance(exc, ScriptError) else {"ok": False, "code": "not_found", "detail": "", "message": "Script [not_found]"}
+        if info["sha256"] != body.sha256:
+            return {"ok": False, "code": "hash_changed", "detail": info["sha256"][:12], "message": "Script [hash_changed]"}
+        ctrl.settings.set("ocr_script.path", info["path"], save=False)
+        ctrl.settings.set("ocr_script.sha256", info["sha256"], save=False)
+        changed = ["ocr_script.path", "ocr_script.sha256"]
+        if body.enable:
+            ctrl.settings.set("ocr_script.enabled", True, save=False)
+            changed.append("ocr_script.enabled")
+        ctrl.settings.save()
+        ctrl.ocr_script.runner.last_error = None
+        ctrl.settings_changed(paths=changed)
+        broadcast_settings()
+        broadcast_ocr_script()
+        return {"ok": True, "ocr_script": ctrl.ocr_script.info(), "settings": public_view(ctrl.settings)}
+
+    @api.post("/ocr-script/forget")
+    def ocr_script_forget():
+        for k, v in (("ocr_script.enabled", False), ("ocr_script.path", ""), ("ocr_script.sha256", "")):
+            ctrl.settings.set(k, v, save=False)
+        ctrl.settings.save()
+        ctrl.settings_changed(paths=["ocr_script.enabled"])
+        broadcast_settings()
+        broadcast_ocr_script()
+        return {"ok": True, "ocr_script": ctrl.ocr_script.info(), "settings": public_view(ctrl.settings)}
+
+    @api.post("/ocr-script/test")
+    def ocr_script_test(body: OcrScriptTestBody):
+        """Roda o script de OCR aprovado (mesmo desligado) com 1 ou 2 imagens — de exemplo ou da(s) sua(s) região(ões) —
+        exatamente como na captura: pré-processamento do perfil, mesmo JSON, mesma limpeza do texto. A miniatura de
+        cada imagem é feita pelo app (aparece mesmo se o script falhar)."""
+        from ..languages import clean_ocr_text
+        from ..ocr_script import OcrScriptError, redact_payload, sample_image
+        from ..pipeline import make_preview
+        chans = ["a", "b"] if body.mode == "dual" else ["uni"]
+        imgs = []
+        if body.source == "capture":
+            prof = ctrl.profile.channels()
+            want = ["a", "b"] if body.mode == "dual" else ["uni"]
+            if body.mode == "single" and "uni" not in prof:
+                raise HTTPException(409, "no_region")
+            if body.mode == "dual" and not all(c in prof for c in want):
+                raise HTTPException(409, "no_region")
+            for c in want:
+                try:
+                    imgs.append((c, ctrl.grabber.grab(prof[c])))
+                except Exception as exc:
+                    raise HTTPException(500, f"falha na captura: {exc}")
+        else:
+            imgs = [(c, sample_image(c)) for c in chans]
+        items = [(c, img, preprocess(img, ctrl.profile.preprocess)) for c, img in imgs]
+        shown = []
+        for c, img, pre in items:
+            pv = make_preview(img)
+            shown.append({"channel": c, "thumb": pv["image"], "width": img.width, "height": img.height,
+                          "processed": _data_url(_shrink(pre, 480))})
+        t0 = time.perf_counter()
+        try:
+            r = ctrl.ocr_script.run(items, ctrl.profile.alphabet, body.mode, chans)
+        except OcrScriptError as exc:
+            broadcast_ocr_script()
+            return {"ok": False, "code": exc.code, "detail": exc.detail, "message": str(exc), "images": shown,
+                    "ms": round((time.perf_counter() - t0) * 1000)}
+        broadcast_ocr_script()
+        for d, res in zip(shown, r.results):
+            d["raw_text"] = res.text
+            d["text"] = ctrl.glossary.apply_replacements(clean_ocr_text(res.text, ctrl.profile.alphabet))
+            d["confidence"] = None if res.confidence is None else round(res.confidence, 1)
+        return {"ok": True, "images": shown, "format": r.format, "ms": round(r.ms), "stderr": r.stderr[-600:],
+                "payload": redact_payload(r.payload)}
+
     # ---------------------------------------------------------------- OCR
     @api.get("/ocr/engines")
     def ocr_engines():
@@ -511,7 +615,7 @@ def create_app(ctrl: AppController, token: str, hub: Optional[EventHub] = None,
             out["processed"] = _data_url(_shrink(pre, body.max_width))
             if body.read:
                 try:
-                    res = ctrl.ocr.get_or_fallback(ctrl.profile.ocr_engine).recognize(pre, ctrl.profile.alphabet)
+                    res = ctrl.read_image(img, pre, body.channel or "uni")    # motor ativo (embutido ou script de OCR)
                     out["text"] = res.text
                     out["confidence"] = res.confidence
                     out["ms"] = round(res.elapsed_ms)

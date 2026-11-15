@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { api, ApiError } from '@/api/client'
 import { numLocale } from '@/lib/i18n'
+import { displayVersion } from '@/lib/format'
 import ninaPng from '@/assets/nina.png'
 import { ICheck, ICopy, IChevron, IDownload, IFolder, IInfo, IRefresh, ITrash, IWifiOff } from '@/components/icons'
 import { Modal } from '@/components/Modal'
@@ -124,7 +125,7 @@ export function UpdatesTab() {
         <img src={ninaPng} alt="" draggable={false} />
         <div>
           <h3>{cfg?.name ?? 'Easy Game Translator'}</h3>
-          <p>v{appVersion || cfg?.version} · by CleitinhoDEV</p>
+          <p>v{displayVersion(appVersion || cfg?.version || '')} · by CleitinhoDEV</p>
           <div className="input-row">
             <Button size="sm" onClick={() => openExternal(LINKS.channel)}>YouTube</Button>
             <Button size="sm" onClick={() => openExternal(LINKS.patreon)}>Patreon</Button>

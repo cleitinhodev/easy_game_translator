@@ -1,4 +1,10 @@
 import { numLocale } from './i18n'
+/** '4.1.0-beta.1' → '4.1 beta' · '4.1.0-beta.2' → '4.1 beta 2' · '4.0.9' → '4.0.9' (curta: '4.0'). */
+export function displayVersion(v: string, short = false): string {
+  const m = /^(\d+)\.(\d+)\.(\d+)-beta(?:\.(\d+))?/.exec(v || '')
+  if (m) return `${m[1]}.${m[2]} beta${m[4] && m[4] !== '1' ? ' ' + m[4] : ''}`
+  return short ? (v || '').split('.').slice(0, 2).join('.') : v
+}
 export const fmtMs = (ms: number) => (ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`)
 export const fmtPct = (v: number) => `${Math.round(v * 100)}%`
 export function fmtTime(ts: number, lang: string) {

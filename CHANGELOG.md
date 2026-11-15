@@ -2,6 +2,37 @@
 
 Todas as mudanças das versões 4.x. Datas no formato AAAA-MM-DD.
 
+## 4.1.0-beta.1 — 2026-11-15 (pré-lançamento "4.1 beta")
+
+> Versão **em teste**. A versão estável (segura) continua sendo a **4.0.9**.
+
+- **Scripts de OCR** (Opções › OCR › **Quem lê o texto da tela** → **Meu script**): use o **seu próprio código** para ler o texto
+  da imagem capturada no lugar dos motores de OCR do app. Só um fica ativo (motores do app × script); a escolha de motor do
+  perfil é guardada e volta ao desligar o script. Independente da tradução (tradutores, IA ou script de tradução — os dois
+  scripts podem ser usados juntos).
+  - **Mesmas entradas e saídas dos OCRs padrão**: o app captura, faz a **miniatura** (como sempre, a partir da captura
+    original), pré-processa e passa ao script **a imagem pré-processada (`path`) e a original (`raw_path`)** como PNG numa
+    pasta temporária privada (0700, arquivos 0600, apagada logo depois), com os caminhos num JSON no stdin
+    (`{"version":1,"kind":"ocr","mode","images":[...],"channels","alphabet","ocr_lang","lang_hint","cjk","preprocess"}`;
+    base64 opcional). Saída: `{"outputs":[...]}` (texto ou `{"text","confidence"}`) ou texto puro com `---` entre os canais.
+    Depois o texto passa pela mesma limpeza, substituições, filtros de lixo/confiança, estabilização e tradução.
+  - **Canal duplo**: o script recebe sempre as 2 imagens [A, B] numa chamada só quando qualquer canal muda; só o canal que
+    mudou atualiza miniatura e texto (como nos motores do app). Em erro a miniatura continua aparecendo e o erro é mostrado
+    em linguagem simples.
+  - **Segurança** (a mesma da aba Scripts): aviso bem visível, confirmação com caminho e **SHA-256**, nova confirmação se o
+    arquivo mudar, sem shell e sem janela, ambiente limpo, tempo limite (padrão **20 s**, 1–120 s), saída até 1 MB, limpeza
+    de pastas temporárias esquecidas ao abrir.
+  - **Testar script** com imagem de exemplo ou a sua região, canal único/duplo: mostra miniatura, imagem recebida, texto lido,
+    confiança, tempo e o JSON enviado (sem caminhos completos). Contrato explicado na tela e exemplos para ver/copiar/salvar.
+  - Seletor **OCR** da barra, barra de status e o painel "Original" mostram **Script de OCR** quando ele está lendo.
+- **Exemplos** em `examples/scripts/` (comentados em pt-BR): `ocr_modelo_basico.py` (sem dependências), `ocr_tesseract.py`
+  (OCR real com o Tesseract, só biblioteca padrão) e `ocr_rapidocr.py` (RapidOCR).
+- Versão exibida como **4.1 beta**. 50 textos novos nos 20 idiomas. Novos endpoints (com token): `/api/ocr-script`
+  (+ `inspect`, `approve`, `forget`, `test`).
+- Testes: 23 novos testes do backend (contrato único/duplo, base64, JSON/texto, erros, tempo limite, hash alterado, ambiente
+  limpo, pastas temporárias, exemplos com Tesseract/RapidOCR reais, pipeline único/duplo com miniatura, exclusividade,
+  migração de configurações) e E2E da aba OCR (92 checagens).
+
 ## 4.0.9 — 2026-11-02
 
 - **Verificação automática dos tradutores na abertura**: durante a intro ("Verificando tradutores… 2/6") os tradutores grátis

@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { create } from 'zustand'
 import { api, connectEvents, configureApi, type WsMessage } from '@/api/client'
-import type { AutoCheck, Channel, ChannelView, CompJob, Metrics, Profile, ScriptInfo, Settings, Snapshot, TrEngine, OcrEngine } from '@/lib/types'
+import type { AutoCheck, Channel, ChannelView, CompJob, Metrics, OcrScriptInfo, Profile, ScriptInfo, Settings, Snapshot, TrEngine, OcrEngine } from '@/lib/types'
 import { mapBackend } from '@/lib/backendMsg'
 import { resolveLang, systemLanguages, translate, type Lang } from '@/lib/i18n'
 
@@ -23,6 +23,7 @@ interface State {
   engines: TrEngine[]
   autocheck: AutoCheck | null
   script: ScriptInfo | null
+  ocrScript: OcrScriptInfo | null
   metrics: Metrics | null
   running: boolean
   channels: Record<Channel, ChannelView>
@@ -79,6 +80,7 @@ export const useStore = create<State>((set, get) => {
       case 'engines': set({ engines: m.data as TrEngine[] }); break
       case 'autocheck': set({ autocheck: m.data as AutoCheck }); break
       case 'script': set({ script: m.data as ScriptInfo }); break
+      case 'ocr_script': set({ ocrScript: m.data as OcrScriptInfo }); break
       case 'metrics': {
         const mt = m.data as Metrics
         set({ metrics: mt, running: mt.running })
@@ -105,7 +107,7 @@ export const useStore = create<State>((set, get) => {
       case 'ocr': {
         const ch = (m.channel || 'uni') as Channel
         const d = m.data
-        set((s) => ({ channels: { ...s.channels, [ch]: { ...s.channels[ch], original: d.text, confidence: d.confidence ?? null, orev: s.channels[ch].orev + 1, empty: false } } }))
+        set((s) => ({ channels: { ...s.channels, [ch]: { ...s.channels[ch], original: d.text, confidence: d.confidence ?? null, ocrEngine: d.engine || '', orev: s.channels[ch].orev + 1, empty: false } } }))
         break
       }
       case 'empty': {
@@ -152,13 +154,13 @@ export const useStore = create<State>((set, get) => {
   const applySnapshot = (s: Snapshot) => {
     set((st) => ({
       snapshot: s, profile: s.profile, settings: s.settings, profiles: s.profiles, ocr: s.ocr, engines: s.engines,
-      metrics: s.metrics, running: s.running, autocheck: s.autocheck ?? st.autocheck, script: s.script ?? st.script, lang: resolveLang(s.settings.ui.language, systemLanguages()), ready: true,
+      metrics: s.metrics, running: s.running, autocheck: s.autocheck ?? st.autocheck, script: s.script ?? st.script, ocrScript: s.ocr_script ?? st.ocrScript, lang: resolveLang(s.settings.ui.language, systemLanguages()), ready: true,
       boxOpen: st.boxOpen,
     }))
   }
 
   return {
-    conn: 'connecting', ready: false, snapshot: null, profile: null, settings: null, profiles: [], ocr: [], engines: [], autocheck: null, script: null,
+    conn: 'connecting', ready: false, snapshot: null, profile: null, settings: null, profiles: [], ocr: [], engines: [], autocheck: null, script: null, ocrScript: null,
     metrics: null, running: false,
     channels: { uni: emptyView(), a: emptyView(), b: emptyView() },
     thumbs: { uni: '', a: '', b: '' },
@@ -174,7 +176,7 @@ export const useStore = create<State>((set, get) => {
       if (window.egt) cfg = await window.egt.getConfig()
       else {
         const q = new URLSearchParams(location.search)   // modo navegador (testes/dev sem Electron)
-        cfg = { port: Number(q.get('port')), token: q.get('token') || '', platform: 'linux', version: '4.0.9', isDev: true, material: 'none', appOrigin: '', e2e: false, userData: '' }
+        cfg = { port: Number(q.get('port')), token: q.get('token') || '', platform: 'linux', version: '4.1.0-beta.1', isDev: true, material: 'none', appOrigin: '', e2e: false, userData: '' }
       }
       configureApi(cfg.port, cfg.token)
       set({ appVersion: cfg.version || '' })

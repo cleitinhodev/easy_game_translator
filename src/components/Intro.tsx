@@ -67,7 +67,7 @@ export function Intro({ show, full = true, onDone }: { show: boolean; full?: boo
           <motion.h1 className="intro-title" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.7, ease: [0.22, 0.9, 0.24, 1] }}>
             {t('intro.welcome')}
           </motion.h1>
-          <motion.p className="intro-sub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.15, duration: 0.7 }}>Easy Game Translator · v4.0.9 by CleitinhoDEV</motion.p>
+          <motion.p className="intro-sub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.15, duration: 0.7 }}>Easy Game Translator · v4.1 beta by CleitinhoDEV</motion.p>
           <motion.span className="intro-progress" aria-hidden initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: ms / 1000, ease: 'linear' }} />
           {ac?.state === 'running' && ac.total > 0 && (
             <motion.p className="intro-check" data-testid="intro-autocheck" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{t('intro.autocheck', { done: ac.done, total: ac.total })}</motion.p>

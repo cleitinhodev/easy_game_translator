@@ -38,8 +38,8 @@ export function modeName(t: T, s: Settings | null) {
   return t('sc.mode_translators')
 }
 
-const short = (h: string) => (h ? `${h.slice(0, 12)}…${h.slice(-6)}` : '—')
-const kb = (n?: number) => (n == null ? '' : n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`)
+export const short = (h: string) => (h ? `${h.slice(0, 12)}…${h.slice(-6)}` : '—')
+export const kb = (n?: number) => (n == null ? '' : n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`)
 
 export function ScriptsTab() {
   const t = useT()
@@ -236,25 +236,25 @@ function ExamplesCard() {
   )
 }
 
-function ConfirmScript({ p, onCancel, onOk }: { p: ScriptInspect | null; onCancel: () => void; onOk: (p: ScriptInspect) => void }) {
+export function ConfirmScript({ p, onCancel, onOk, title, testid = 'sc' }: { p: ScriptInspect | null; onCancel: () => void; onOk: (p: ScriptInspect) => void; title?: string; testid?: string }) {
   const t = useT()
   const [trust, setTrust] = useState(false)
   useEffect(() => setTrust(false), [p])
   return (
-    <Modal open={!!p} onClose={onCancel} width={560} title={t('sc.confirm_title')}
+    <Modal open={!!p} onClose={onCancel} width={560} title={title || t('sc.confirm_title')}
       footer={<><Button variant="ghost" onClick={onCancel}>{t('common.cancel')}</Button>
-        <Button variant="primary" disabled={!trust} onClick={() => p && onOk(p)} data-testid="sc-confirm-ok">{t('sc.confirm_ok')}</Button></>}>
+        <Button variant="primary" disabled={!trust} onClick={() => p && onOk(p)} data-testid={`${testid}-confirm-ok`}>{t('sc.confirm_ok')}</Button></>}>
       {p && (
-        <div className="sc-confirm" data-testid="sc-confirm">
+        <div className="sc-confirm" data-testid={`${testid}-confirm`}>
           <div className="ai-warn" role="alert"><span className="ai-warn-ico" aria-hidden>⚠</span><div><p>{t('sc.warn_body')}</p></div></div>
           <dl className="sc-dl">
             <dt>{t('sc.f_name')}</dt><dd><strong>{p.name}</strong> {p.size != null && <small className="muted">({kb(p.size)})</small>}</dd>
             <dt>{t('sc.f_path')}</dt><dd className="selectable mono sc-wrap" dir="ltr">{p.path}</dd>
-            <dt>SHA-256</dt><dd className="selectable mono sc-wrap" dir="ltr" data-testid="sc-confirm-sha">{p.sha256}</dd>
+            <dt>SHA-256</dt><dd className="selectable mono sc-wrap" dir="ltr" data-testid={`${testid}-confirm-sha`}>{p.sha256}</dd>
             <dt>{t('sc.f_runtime')}</dt><dd>{p.runtime_found ? <Chip tone="ok">{p.runtime}</Chip> : <Chip tone="warn">{t('sc.runtime_missing', { rt: p.runtime || '?' })}</Chip>}</dd>
           </dl>
           <p className="muted small">{t('sc.confirm_note')}</p>
-          <label className="sc-check"><input type="checkbox" checked={trust} onChange={(e) => setTrust(e.target.checked)} data-testid="sc-trust" /> {t('sc.trust')}</label>
+          <label className="sc-check"><input type="checkbox" checked={trust} onChange={(e) => setTrust(e.target.checked)} data-testid={`${testid}-trust`} /> {t('sc.trust')}</label>
         </div>
       )}
     </Modal>

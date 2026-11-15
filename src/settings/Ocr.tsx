@@ -4,6 +4,7 @@ import { api } from '@/api/client'
 import { IFolder, IRefresh, IScan, ICopy, ICheck } from '@/components/icons'
 import { Button, Chip, Select, Slider, Switch, TextInput } from '@/components/ui'
 import { useStore, useT } from '@/store'
+import { OcrScriptPanel, OcrSourceCard } from './OcrScript'
 import { Result, Row, Section } from './parts'
 
 interface TessInfo { found: boolean; path: string; version: string; langs: string[]; missing: string[]; error?: string }
@@ -30,6 +31,9 @@ export function OcrTab() {
   const [tessPath, setTessPath] = useState(settings.ocr.tesseract_path)
   const [prev, setPrev] = useState<{ image: string; processed: string; text?: string; ms?: number; confidence?: number | null; error?: string } | 'busy' | null>(null)
   const [scanning, setScanning] = useState(false)
+  const [view, setView] = useState<'builtin' | 'script'>(settings.ocr_script?.enabled ? 'script' : 'builtin')
+  const scriptOn = !!settings.ocr_script?.enabled
+  useEffect(() => { if (scriptOn) setView('script') }, [scriptOn])
 
   const rescan = async () => {
     setScanning(true)
@@ -51,7 +55,10 @@ export function OcrTab() {
   const pre = profile.preprocess
 
   return (
-    <div className="s-page">
+    <div className="s-page" data-testid="ocr-page">
+      <OcrSourceCard view={view} setView={setView} />
+      {view === 'script' && <OcrScriptPanel />}
+      {view === 'builtin' && <>
       <Section title={t('ocr.engine')} desc={t('ocr.engine_tip')} right={<Button size="sm" icon={<motion.span animate={{ rotate: scanning ? 360 : 0 }} transition={{ duration: 0.6 }} style={{ display: 'flex' }}><IRefresh size={15} /></motion.span>} onClick={rescan}>{t('ocr.rescan')}</Button>}>
         <div className="engine-list" role="radiogroup" aria-label={t('ocr.engine')}>
           {ocr.map((e) => {
@@ -104,8 +111,9 @@ export function OcrTab() {
         </Row>
         <Row label={t('ocr.easy_gpu')}><Switch checked={settings.ocr.easyocr_gpu} label={t('ocr.easy_gpu')} onChange={(v) => patch({ 'ocr.easyocr_gpu': v })} /></Row>
       </Section>
+      </>}
 
-      <Section title={t('ocr.pre')} desc={t('ocr.pre_tip')}>
+      <Section title={t('ocr.pre')} desc={view === 'script' ? `${t('ocr.pre_tip')} ${t('ocs.pre_note')}` : t('ocr.pre_tip')}>
         <Row label={t('ocr.scale')}><Slider width={240} min={1} max={3} step={0.1} value={pre.scale} label={t('ocr.scale')} format={(v) => `${v.toFixed(1)}×`} onCommit={(v) => patchProfile({ preprocess: { scale: Math.round(v * 10) / 10 } })} /></Row>
         <div className="toggle-grid">
           {(['grayscale', 'auto_invert', 'contrast', 'threshold', 'sharpen'] as const).map((k) => (

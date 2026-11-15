@@ -4,7 +4,7 @@ import helpPng from '@/assets/nina_window_help.png'
 import { useStore, useT } from '@/store'
 import { Modal } from './Modal'
 import { Button } from './ui'
-import { SOFT_RAINBOW } from '@/lib/format'
+import { SOFT_RAINBOW, displayVersion } from '@/lib/format'
 
 // Links do help_window.py do v3 (CleitinhoDEV)
 export const LINKS = {
@@ -67,7 +67,7 @@ export function HelpModal() {
   const t = useT()
   const open = useStore((s) => s.modal === 'help')
   const setModal = useStore((s) => s.setModal)
-  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.0.9')
+  const version = useStore((s) => s.appVersion || s.snapshot?.app.version || '4.1.0-beta.1')
   const links: [string, string, string][] = [
     [t('help.website'), LINKS.website, 'site'], [t('help.tutorial'), LINKS.tutorial, 'tut'], [t('help.donate'), LINKS.donate, 'don'],
     [t('help.channel'), LINKS.channel, 'yt'], [t('help.support'), LINKS.patreon, 'pat'], [t('help.projects'), LINKS.github, 'git'],
@@ -79,7 +79,7 @@ export function HelpModal() {
         <motion.img src={helpPng} alt="Nina" className="help-img" draggable={false} initial={{ opacity: 0, scale: 1.12 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, ease: [0.22, 0.9, 0.24, 1] }} />
         <div className="help-titles">
           {open && <h2><Typed text="Easy Game Translator" speed={42} /></h2>}
-          {open && <p><Typed text={`v${version.split('.').slice(0, 2).join('.')} by CleitinhoDEV`} delay={950} speed={55} /></p>}
+          {open && <p><Typed text={`v${displayVersion(version, true)} by CleitinhoDEV`} delay={950} speed={55} /></p>}
         </div>
       </div>
       <div className="link-grid">

@@ -36,6 +36,10 @@ export interface ScriptInfo {
   error: string; error_detail: string; current_sha256: string; changed: boolean; size?: number
   runtime?: string; runtime_found?: boolean; runtime_path?: string; runtime_error?: string
 }
+/** script de OCR (4.1 beta): lê a imagem capturada no lugar dos motores de OCR */
+export interface OcrScriptInfo extends ScriptInfo { send_base64: boolean; last_format: string }
+export interface OcrScriptImage { channel: string; thumb: string; processed: string; width: number; height: number; text?: string; raw_text?: string; confidence?: number | null }
+export interface OcrScriptTest { ok: boolean; images: OcrScriptImage[]; format?: string; ms?: number; stderr?: string; payload?: Record<string, unknown>; code?: string; detail?: string; message?: string }
 export interface ScriptInspect { ok: boolean; path: string; name: string; size: number; sha256: string; runtime: string; runtime_found: boolean; runtime_path?: string; runtime_error?: string; code?: string; detail?: string; message?: string }
 export interface TrTest { engine: string; ok: boolean; text: string; code: string; message: string; ms: number; instance?: string }
 export interface Alphabet { key: string; title: string; tesseract: string; cjk: boolean }
@@ -71,6 +75,7 @@ export interface Settings {
     [k: string]: string | string[] | boolean | number
   }
   script: { enabled: boolean; path: string; sha256: string; timeout: number }
+  ocr_script: { enabled: boolean; path: string; sha256: string; timeout: number; send_base64: boolean }
   ai: { mode: 'off' | 'gemini' | 'ollama'; gemini_key: string; gemini_model: string; ollama_url: string; ollama_model: string; context: string; env_key_found: boolean; env_key_names?: string[] }
   secrets?: { state: Record<string, 'none' | 'ok' | 'unreadable'>; scheme: string }
   box: { alpha: number; borderless: boolean; click_through: boolean; auto_font: boolean; font_size: number; text_color: string; bg_color: string; show_original: boolean; exclude_from_capture: boolean }
@@ -92,6 +97,7 @@ export interface Snapshot {
   metrics: Metrics
   autocheck?: AutoCheck
   script?: ScriptInfo
+  ocr_script?: OcrScriptInfo
 }
 
 export interface ChannelView {
@@ -102,6 +108,8 @@ export interface ChannelView {
   engine: string
   cached: boolean
   confidence: number | null
+  /** motor que leu o texto original ("script" = script de OCR) */
+  ocrEngine?: string
   ms: number
   src: string
   /** incrementa a cada tradução nova (dispara a animação de revelação) */

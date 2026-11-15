@@ -29,6 +29,8 @@ from .translate import TranslationCache, TranslationManager, build_engines
 from .translate.base import TranslationResult
 from .translate.manager import engine_factories
 from .userscript import ScriptError, ScriptRunner
+from .ocr_script import OcrScriptBackend, sweep_temp
+from .pipeline import SCRIPT_ENGINE
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +58,13 @@ class AppController:
         self.manager = TranslationManager(
             self.cache, lambda: build_engines(self.settings),
             lambda: bool(self.settings.get("translation.cache_only", False)))
-        self.pipeline = Pipeline(self.grabber.grab, self.ocr.get_or_fallback, self.translate_pipeline_text,
+        # 4.1 beta: script de OCR do usuário (motor "script", exclusivo com os motores embutidos)
+        self.ocr_script = OcrScriptBackend(self.settings, lambda: self.profile.preprocess.to_dict())
+        try:
+            sweep_temp()
+        except Exception:  # noqa: BLE001
+            pass
+        self.pipeline = Pipeline(self.grabber.grab, self.ocr_provider, self.translate_pipeline_text,
                                  replace_fn=self.glossary.apply_replacements)
         self.script = ScriptRunner(self.settings)
         self.pipeline.batch_fn = self.translate_script_batch       # modo Scripts: canal A + B numa chamada só
@@ -85,13 +93,33 @@ class AppController:
             log.info("OCR '%s' indisponível; padrão agora é '%s'", self.profile.ocr_engine, alt)
             self.profile.ocr_engine = alt
 
+    # ------------------------------------------------------------ OCR (embutido ou script)
+    def ocr_provider(self, engine_id: str):
+        """Motor do pipeline: "script" = script de OCR do usuário; senão o motor embutido (com reserva)."""
+        if engine_id == SCRIPT_ENGINE:
+            return self.ocr_script
+        return self.ocr.get_or_fallback(engine_id)
+
+    def active_ocr_engine(self) -> str:
+        """O motor que o pipeline usa agora: "script" se o script de OCR estiver ligado; senão o do perfil."""
+        return SCRIPT_ENGINE if self.ocr_script.active() else self.profile.ocr_engine
+
+    def read_image(self, img, pre=None, channel: str = "uni"):
+        """Lê UMA imagem com o motor ativo (prévia da aba OCR). Devolve OcrResult; levanta OcrError."""
+        from .preprocess import preprocess as _pre
+        pre = pre if pre is not None else _pre(img, self.profile.preprocess)
+        eid = self.active_ocr_engine()
+        if eid == SCRIPT_ENGINE:
+            return self.ocr_script.recognize(pre, self.profile.alphabet, raw=img, channel=channel)
+        return self.ocr.get_or_fallback(eid).recognize(pre, self.profile.alphabet)
+
     # ------------------------------------------------------------ configuração
     def build_config(self) -> PipelineConfig:
         p, s = self.profile, self.settings
         f = s.section("filters")
         return PipelineConfig(
             channels=p.channels(), interval=p.interval, alphabet=p.alphabet, target=p.target,
-            ocr_engine=p.ocr_engine, preprocess=p.preprocess, stable_ms=f["stable_ms"],
+            ocr_engine=self.active_ocr_engine(), preprocess=p.preprocess, stable_ms=f["stable_ms"],
             max_wait_ms=f["max_wait_ms"], min_chars=f["min_chars"], min_alnum_ratio=f["min_alnum_ratio"],
             min_confidence=f["min_confidence"], diff_mean=f["diff_mean"], similarity=f["similarity"])
 
@@ -147,9 +175,20 @@ class AppController:
                     raise ValueError("idioma inválido")
                 p.target = v
             elif k == "ocr_engine":
+                if v == SCRIPT_ENGINE:            # escolher "Script" = ligar o script de OCR (precisa estar aprovado)
+                    try:
+                        self.ocr_script.runner.check()
+                    except ScriptError as exc:
+                        raise ValueError(f"script de OCR indisponível: {exc.code}") from None
+                    if not self.ocr_script.active():
+                        self.settings.set("ocr_script.enabled", True)
+                    changed.append(k)
+                    continue
                 if v not in ocr_mod.BACKENDS:
                     raise ValueError("motor de OCR desconhecido")
                 p.ocr_engine = v
+                if self.ocr_script.active():      # modos exclusivos: escolher um motor embutido desliga o script de OCR
+                    self.settings.set("ocr_script.enabled", False)
             elif k == "interval":
                 p.interval = max(0.2, min(5.0, float(v)))
                 self.settings.set("capture.interval", p.interval, save=False)
@@ -179,7 +218,7 @@ class AppController:
         self.manager.reset_backoff()
         self.sync()
         paths = paths or []
-        if reset_ocr or any(p.startswith("ocr.") for p in paths):
+        if reset_ocr or any(p.startswith(("ocr.", "ocr_script.")) for p in paths):
             self.pipeline.refresh("full")          # motor/idiomas/GPU do OCR: recaptura e refaz o OCR
         elif any(p.startswith(("translation.", "ai.", "script.")) for p in paths):
             self.pipeline.refresh("translate")     # motores, ordem, modo somente-cache, IA: só retraduz
@@ -376,7 +415,7 @@ class AppController:
             "hit_rate": round(self.manager.hit_rate, 3),
             "cache_count": self.cache.count(),
             "stats": stats,
-            "ocr_engine": self.profile.ocr_engine,
+            "ocr_engine": self.active_ocr_engine(),
             "net": self.net,
             "engines": self.manager.engine_status(),
             "uptime": round(time.time() - self._started),
@@ -541,6 +580,7 @@ class AppController:
             "engines": self.translation_engines(),
             "autocheck": dict(self.autocheck_state),
             "script": self.script.info(),
+            "ocr_script": self.ocr_script.info(),
             "metrics": self.metrics(),
         }
 
